@@ -44,6 +44,7 @@ import {
 import { topicIsConvertibleToSchema } from "../../topicIsConvertibleToSchema";
 import { ICameraHandler } from "../ICameraHandler";
 import { getTopicMatchPrefix, sortPrefixMatchesToFront } from "../Images/topicPrefixMatching";
+import { ColorModeSettings, baseColorModeSettingsNode } from "../pointClouds/colors";
 
 const IMAGE_TOPIC_PATH = ["imageMode", "imageTopic"];
 const CALIBRATION_TOPIC_PATH = ["imageMode", "calibrationTopic"];
@@ -79,6 +80,11 @@ const DEFAULT_CONFIG = {
   flipHorizontal: false,
   flipVertical: false,
   rotation: 0 as 0 | 90 | 180 | 270,
+  colorMode: "flat" as Exclude<ColorModeSettings["colorMode"], "rgba-fields">,
+  gradient: ["#ffffff", "#000000"] as ColorModeSettings["gradient"],
+  colorMap: "rainbow" as ColorModeSettings["colorMap"],
+  explicitAlpha: 1,
+  flatColor: "#ffffff",
 };
 
 type ConfigWithDefaults = ImageModeConfig & typeof DEFAULT_CONFIG;
@@ -327,16 +333,10 @@ export class ImageMode
   public override settingsNodes(): SettingsTreeEntry[] {
     const handler = this.handleSettingsAction;
 
-    const {
-      imageTopic,
-      calibrationTopic,
-      synchronize,
-      flipHorizontal,
-      flipVertical,
-      rotation,
-      minValue,
-      maxValue,
-    } = this.#getImageModeSettings();
+    const settings = this.#getImageModeSettings();
+
+    const { imageTopic, calibrationTopic, synchronize, flipHorizontal, flipVertical, rotation } =
+      settings;
 
     const imageTopics = filterMap(this.renderer.topics ?? [], (topic) => {
       if (!topicIsConvertibleToSchema(topic, ALL_SUPPORTED_IMAGE_SCHEMAS)) {
@@ -428,22 +428,35 @@ export class ImageMode
         { label: "270°", value: 270 },
       ],
     };
-    fields.minValue = {
-      input: "number",
-      label: "Min (depth images)",
-      placeholder: "0",
-      step: 1,
-      precision: 0,
-      value: minValue,
-    };
-    fields.maxValue = {
-      input: "number",
-      label: "Max (depth images)",
-      placeholder: "10000",
-      step: 1,
-      precision: 0,
-      value: maxValue,
-    };
+
+    const colorNode = baseColorModeSettingsNode(
+      [],
+      settings as ImageModeConfig,
+      {
+        name: "Name",
+        schemaName: "my.schema",
+        datatype: "datatype",
+      },
+      {
+        visible: true,
+        gradient: DEFAULT_CONFIG.gradient,
+      },
+      {
+        supportsPackedRgbModes: false,
+        supportsRgbaFieldsMode: false,
+      },
+    );
+
+    // Single channel images do not have fields to pick from, so remove that
+    // form selection.
+    delete colorNode.fields.colorField;
+    // The flat option here just mean the normal greyscale, so remove the
+    // color picker.
+    delete colorNode.fields.flatColor;
+    // There is nothing behind the image, so alpha values don't matter.
+    delete colorNode.fields.explicitAlpha;
+    Object.assign(fields, colorNode.fields);
+
     return [
       {
         path: ["imageMode"],
@@ -503,16 +516,16 @@ export class ImageMode
       if (config.flipVertical !== prevImageModeConfig.flipVertical) {
         this.#camera.setFlipVertical(config.flipVertical);
       }
-      if (
-        config.minValue !== prevImageModeConfig.minValue ||
-        config.maxValue !== prevImageModeConfig.maxValue
-      ) {
-        this.#imageRenderable?.setSettings({
-          ...this.#imageRenderable.userData.settings,
-          minValue: config.minValue,
-          maxValue: config.maxValue,
-        });
-      }
+      this.#imageRenderable?.setSettings({
+        ...this.#imageRenderable.userData.settings,
+        colorMode: config.colorMode,
+        flatColor: config.flatColor,
+        gradient: config.gradient as [string, string],
+        colorMap: config.colorMap,
+        explicitAlpha: config.explicitAlpha,
+        minValue: config.minValue,
+        maxValue: config.maxValue,
+      });
       if (config.synchronize !== prevImageModeConfig.synchronize) {
         this.removeAllRenderables();
       }
@@ -619,6 +632,12 @@ export class ImageMode
     const config = this.#getImageModeSettings();
     const userSettings: ImageRenderableSettings = {
       ...IMAGE_RENDERABLE_DEFAULT_SETTINGS,
+      colorMode: config.colorMode,
+      flatColor: config.flatColor,
+      colorField: config.colorField,
+      gradient: config.gradient as [string, string],
+      colorMap: config.colorMap,
+      explicitAlpha: config.explicitAlpha,
       minValue: config.minValue,
       maxValue: config.maxValue,
       // planarProjectionFactor must be 1 to avoid imprecise projection due to small number of grid subdivisions
@@ -635,6 +654,9 @@ export class ImageMode
       cameraInfo: undefined,
       cameraModel: undefined,
       image,
+      rotation: this.renderer.config.imageMode.rotation ?? 0,
+      flipHorizontal: this.renderer.config.imageMode.flipHorizontal ?? false,
+      flipVertical: this.renderer.config.imageMode.flipVertical ?? false,
       texture: undefined,
       material: undefined,
       geometry: undefined,
@@ -682,12 +704,22 @@ export class ImageMode
   #getImageModeSettings(): Immutable<ConfigWithDefaults> {
     const config = { ...this.renderer.config.imageMode };
 
+    const colorMode =
+      config.colorMode === "rgba-fields"
+        ? DEFAULT_CONFIG.colorMode
+        : (config.colorMode as typeof DEFAULT_CONFIG.colorMode);
+
     return {
       ...config,
       synchronize: config.synchronize ?? DEFAULT_CONFIG.synchronize,
       rotation: config.rotation ?? DEFAULT_CONFIG.rotation,
       flipHorizontal: config.flipHorizontal ?? DEFAULT_CONFIG.flipHorizontal,
       flipVertical: config.flipVertical ?? DEFAULT_CONFIG.flipVertical,
+      colorMode: colorMode ?? DEFAULT_CONFIG.colorMode,
+      colorMap: config.colorMap ?? DEFAULT_CONFIG.colorMap,
+      gradient: config.gradient ?? DEFAULT_CONFIG.gradient,
+      explicitAlpha: config.explicitAlpha ?? DEFAULT_CONFIG.explicitAlpha,
+      flatColor: config.flatColor ?? DEFAULT_CONFIG.flatColor,
     };
   }
 
@@ -802,6 +834,11 @@ export class ImageMode
       flipVertical: settings.flipVertical,
       minValue: settings.minValue,
       maxValue: settings.maxValue,
+      colorMode: settings.colorMode,
+      colorMap: settings.colorMap,
+      gradient: settings.gradient as ColorModeSettings["gradient"],
+      explicitAlpha: settings.explicitAlpha,
+      flatColor: settings.flatColor,
     };
   }
 }

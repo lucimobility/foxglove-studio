@@ -29,6 +29,7 @@ import ThemeProvider from "@foxglove/studio-base/theme/ThemeProvider";
 import type {
   FollowMode,
   IRenderer,
+  ImageModeConfig,
   RendererConfig,
   RendererEvents,
   RendererSubscription,
@@ -116,6 +117,18 @@ export function ThreeDeeRender(props: {
       Partial<LayerSettingsTransform>
     >;
 
+    // Merge in config from the legacy Image panel
+    // const legacyImageConfig = partialConfig as DeepPartial<LegacyImageConfig> | undefined;
+
+    const imageMode: ImageModeConfig = {
+      imageTopic: partialConfig?.imageMode?.imageTopic,
+      ...partialConfig?.imageMode,
+      annotations: partialConfig?.imageMode?.annotations as
+        | ImageModeConfig["annotations"]
+        | undefined,
+      gradient: undefined,
+    };
+
     return {
       cameraState,
       followMode: partialConfig?.followMode ?? "follow-pose",
@@ -125,7 +138,7 @@ export function ThreeDeeRender(props: {
       topics: partialConfig?.topics ?? {},
       layers: partialConfig?.layers ?? {},
       publish,
-      imageMode: partialConfig?.imageMode ?? {},
+      imageMode,
     };
   });
   const configRef = useLatest(config);

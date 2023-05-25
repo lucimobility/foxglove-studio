@@ -226,7 +226,7 @@ export function baseColorModeSettingsNode<Settings extends ColorModeSettings & B
   msgFields: string[],
   config: Partial<Settings>,
   topic: Topic,
-  defaults: Settings,
+  defaults: Pick<Settings, "gradient" | "visible">,
   {
     supportsPackedRgbModes,
     supportsRgbaFieldsMode,

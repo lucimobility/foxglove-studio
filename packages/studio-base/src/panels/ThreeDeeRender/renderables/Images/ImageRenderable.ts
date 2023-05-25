@@ -17,16 +17,15 @@ import { RosValue } from "@foxglove/studio-base/players/types";
 import { AnyImage } from "./ImageTypes";
 import { RawImageOptions, decodeCompressedImageToBitmap } from "./decodeImage";
 import { CameraInfo } from "../../ros";
+import { ColorModeSettings } from "../pointClouds/colors";
 
-export interface ImageRenderableSettings {
+export interface ImageRenderableSettings extends ColorModeSettings {
   visible: boolean;
   frameLocked?: boolean;
   cameraInfoTopic: string | undefined;
   distance: number;
   planarProjectionFactor: number;
   color: string;
-  minValue?: number;
-  maxValue?: number;
 }
 
 const CREATE_BITMAP_ERR_KEY = "CreateBitmap";
@@ -41,6 +40,11 @@ export const IMAGE_RENDERABLE_DEFAULT_SETTINGS: ImageRenderableSettings = {
   distance: DEFAULT_DISTANCE,
   planarProjectionFactor: DEFAULT_PLANAR_PROJECTION_FACTOR,
   color: "#ffffff",
+  colorMode: "flat",
+  flatColor: "#ffffff",
+  gradient: ["#ffffff", "#000000"],
+  colorMap: "turbo",
+  explicitAlpha: 0,
 };
 export type ImageUserData = BaseUserData & {
   topic: string;
@@ -48,6 +52,9 @@ export type ImageUserData = BaseUserData & {
   cameraInfo: CameraInfo | undefined;
   cameraModel: PinholeCameraModel | undefined;
   image: AnyImage | undefined;
+  rotation: 0 | 90 | 180 | 270;
+  flipHorizontal: boolean;
+  flipVertical: boolean;
   texture: THREE.Texture | undefined;
   material: THREE.MeshBasicMaterial | undefined;
   geometry: THREE.PlaneGeometry | undefined;
@@ -80,8 +87,7 @@ export class ImageRenderable extends Renderable<ImageUserData> {
   public constructor(topicName: string, renderer: IRenderer, userData: ImageUserData) {
     super(topicName, renderer, userData);
     this.#rawImageOptions = {
-      minValue: userData.settings.minValue,
-      maxValue: userData.settings.maxValue,
+      ...userData.settings,
     };
   }
 
@@ -126,6 +132,7 @@ export class ImageRenderable extends Renderable<ImageUserData> {
     this.userData.cameraModel = cameraModel;
   };
 
+  // ROSS: This is the new function.
   public setSettings(newSettings: ImageRenderableSettings): void {
     const prevSettings = this.userData.settings;
     if (prevSettings.cameraInfoTopic !== newSettings.cameraInfoTopic) {
@@ -148,11 +155,14 @@ export class ImageRenderable extends Renderable<ImageUserData> {
     }
 
     if (
+      prevSettings.colorMode !== newSettings.colorMode ||
+      prevSettings.flatColor !== newSettings.flatColor ||
+      prevSettings.gradient !== newSettings.gradient ||
+      prevSettings.colorMap !== newSettings.colorMap ||
       prevSettings.minValue !== newSettings.minValue ||
       prevSettings.maxValue !== newSettings.maxValue
     ) {
-      this.#rawImageOptions.minValue = newSettings.minValue;
-      this.#rawImageOptions.maxValue = newSettings.maxValue;
+      this.#rawImageOptions = { ...newSettings };
       // Decode the current image again, which takes into account the new options
       const image = this.userData.image;
       if (image) {

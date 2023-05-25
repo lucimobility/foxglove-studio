@@ -34,6 +34,7 @@ import { Quaternion, Vector3 } from "./ros";
 import { BaseSettings, CustomLayerSettings, SelectEntry } from "./settings";
 import { TransformTree } from "./transforms";
 import { InterfaceMode } from "./types";
+import { ColorModeSettings } from "./renderables/pointClouds/colors";
 
 export type RendererEvents = {
   startFrame: (currentTime: bigint, renderer: IRenderer) => void;
@@ -67,7 +68,7 @@ export type ImageAnnotationSettings = {
 };
 
 /** Settings pertaining to Image mode */
-export type ImageModeConfig = {
+export type ImageModeConfig = Partial<ColorModeSettings> & {
   /** Image topic to display */
   imageTopic?: string;
   /** Topic containing CameraCalibration or CameraInfo */

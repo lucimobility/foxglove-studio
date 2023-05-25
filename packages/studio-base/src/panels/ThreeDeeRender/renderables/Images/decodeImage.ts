@@ -21,6 +21,7 @@ import { RawImage } from "@foxglove/schemas";
 
 import { CompressedImageTypes } from "./ImageTypes";
 import { Image as RosImage } from "../../ros";
+import { ColorModeSettings, getColorConverter } from "../pointClouds/colors";
 
 export async function decodeCompressedImageToBitmap(
   image: CompressedImageTypes,
@@ -30,10 +31,30 @@ export async function decodeCompressedImageToBitmap(
   return await createImageBitmap(bitmapData, { resizeWidth });
 }
 
-export type RawImageOptions = {
-  minValue?: number;
-  maxValue?: number;
-};
+export type RawImageOptions = ColorModeSettings;
+
+function makeColorConverter(
+  settings: ColorModeSettings,
+  defaultMaxValue: number,
+): ((value: number) => { r: number; g: number; b: number; a: number }) | undefined {
+  if (settings.colorMode === "flat" || settings.colorMode === "rgba-fields") {
+    return undefined;
+  }
+  const min = settings.minValue ?? 0;
+  const max = settings.maxValue ?? defaultMaxValue;
+  const c = getColorConverter(
+    settings as ColorModeSettings & {
+      colorMode: typeof settings.colorMode;
+    },
+    min,
+    max,
+  );
+  return (value: number) => {
+    const output = { r: 0, g: 0, b: 0, a: 0 };
+    c(output, value);
+    return output;
+  };
+}
 
 export function decodeRawImage(
   image: RosImage | RawImage,
@@ -85,7 +106,12 @@ export function decodeRawImage(
       break;
     case "mono16":
     case "16UC1":
-      decodeMono16(rawData, width, height, is_bigendian, output, options);
+      const converter = makeColorConverter(options, 65536);
+      decodeMono16(rawData, width, height, is_bigendian, output, {
+        minValue: options.minValue,
+        maxValue: options.maxValue,
+        colorConverter: converter,
+      });
       break;
     default:
       throw new Error(`Unsupported encoding ${encoding}`);
