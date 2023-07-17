@@ -105,7 +105,7 @@ export function decodeRawImage(
       decodeMono8(rawData, width, height, output);
       break;
     case "mono16":
-    case "16UC1":
+    case "16UC1": {
       const converter = makeColorConverter(options, 65536);
       decodeMono16(rawData, width, height, is_bigendian, output, {
         minValue: options.minValue,
@@ -113,6 +113,7 @@ export function decodeRawImage(
         colorConverter: converter,
       });
       break;
+    }
     default:
       throw new Error(`Unsupported encoding ${encoding}`);
   }

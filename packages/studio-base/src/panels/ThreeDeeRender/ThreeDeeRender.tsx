@@ -117,9 +117,6 @@ export function ThreeDeeRender(props: {
       Partial<LayerSettingsTransform>
     >;
 
-    // Merge in config from the legacy Image panel
-    // const legacyImageConfig = partialConfig as DeepPartial<LegacyImageConfig> | undefined;
-
     const imageMode: ImageModeConfig = {
       imageTopic: partialConfig?.imageMode?.imageTopic,
       ...partialConfig?.imageMode,

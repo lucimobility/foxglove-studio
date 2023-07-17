@@ -30,11 +30,11 @@ import { DownloadImageInfo } from "./renderables/Images/ImageTypes";
 import { MeasurementTool } from "./renderables/MeasurementTool";
 import { PublishClickTool, PublishClickType } from "./renderables/PublishClickTool";
 import { MarkerPool } from "./renderables/markers/MarkerPool";
+import { ColorModeSettings } from "./renderables/pointClouds/colors";
 import { Quaternion, Vector3 } from "./ros";
 import { BaseSettings, CustomLayerSettings, SelectEntry } from "./settings";
 import { TransformTree } from "./transforms";
 import { InterfaceMode } from "./types";
-import { ColorModeSettings } from "./renderables/pointClouds/colors";
 
 export type RendererEvents = {
   startFrame: (currentTime: bigint, renderer: IRenderer) => void;

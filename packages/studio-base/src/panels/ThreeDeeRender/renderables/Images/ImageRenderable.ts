@@ -132,7 +132,6 @@ export class ImageRenderable extends Renderable<ImageUserData> {
     this.userData.cameraModel = cameraModel;
   };
 
-  // ROSS: This is the new function.
   public setSettings(newSettings: ImageRenderableSettings): void {
     const prevSettings = this.userData.settings;
     if (prevSettings.cameraInfoTopic !== newSettings.cameraInfoTopic) {

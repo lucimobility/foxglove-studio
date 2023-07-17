@@ -715,7 +715,7 @@ export class ImageMode
       rotation: config.rotation ?? DEFAULT_CONFIG.rotation,
       flipHorizontal: config.flipHorizontal ?? DEFAULT_CONFIG.flipHorizontal,
       flipVertical: config.flipVertical ?? DEFAULT_CONFIG.flipVertical,
-      colorMode: colorMode ?? DEFAULT_CONFIG.colorMode,
+      colorMode,
       colorMap: config.colorMap ?? DEFAULT_CONFIG.colorMap,
       gradient: config.gradient ?? DEFAULT_CONFIG.gradient,
       explicitAlpha: config.explicitAlpha ?? DEFAULT_CONFIG.explicitAlpha,
