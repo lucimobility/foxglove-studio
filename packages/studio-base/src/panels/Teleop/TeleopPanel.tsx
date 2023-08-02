@@ -19,6 +19,13 @@ import Stack from "@foxglove/studio-base/components/Stack";
 import ThemeProvider from "@foxglove/studio-base/theme/ThemeProvider";
 
 import DirectionalPad, { DirectionalPadAction } from "./DirectionalPad";
+import {
+  MessagePipelineContext,
+  useMessagePipeline,
+} from "@foxglove/studio-base/components/MessagePipeline";
+
+import { Immutable } from "@foxglove/studio";
+import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 
 type TeleopPanelProps = {
   context: PanelExtensionContext;
@@ -33,6 +40,8 @@ const geometryMsgOptions = [
   { label: "angular-z", value: "angular-z" },
 ];
 
+var tmp = [{ label: "", value: "" }];
+
 type Config = {
   topic: undefined | string;
   publishRate: number;
@@ -43,6 +52,10 @@ type Config = {
 };
 
 function buildSettingsTree(config: Config, topics: readonly Topic[]): SettingsTreeNodes {
+  // const diffTopics = useMessagePipeline(selectSortedTopics);
+
+  // const test = getOptions();
+
   const general: SettingsTreeNode = {
     label: "General",
     fields: {
@@ -51,7 +64,7 @@ function buildSettingsTree(config: Config, topics: readonly Topic[]): SettingsTr
         label: "Topic",
         input: "autocomplete",
         value: config.topic,
-        items: topics.map((t) => t.name),
+        items: topics.map((t) => t.schemaName),
       },
     },
     children: {
@@ -62,7 +75,8 @@ function buildSettingsTree(config: Config, topics: readonly Topic[]): SettingsTr
             label: "Field",
             input: "select",
             value: config.upButton.field,
-            options: geometryMsgOptions,
+            options: tmp,
+            // options: topics.map((t) => ({ label: t.name, value: t.schemaName })),
           },
           value: { label: "Value", input: "number", value: config.upButton.value },
         },
@@ -116,6 +130,9 @@ function TeleopPanel(props: TeleopPanelProps): JSX.Element {
   const [currentAction, setCurrentAction] = useState<DirectionalPadAction | undefined>();
   const [topics, setTopics] = useState<readonly Topic[]>([]);
 
+  // get message options from topic
+
+  // const options = [{ label: "linear-x", value: "linear-x" }];
   // resolve an initial config which may have some missing fields into a full config
   const [config, setConfig] = useState<Config>(() => {
     const partialConfig = context.initialState as DeepPartial<Config>;
@@ -275,6 +292,10 @@ function TeleopPanel(props: TeleopPanelProps): JSX.Element {
   const canPublish = context.publish != undefined && config.publishRate > 0;
   const hasTopic = Boolean(currentTopic);
   const enabled = canPublish && hasTopic;
+  const datatypes = ;
+  const fields = datatypes.get(datatype)?.definitions;
+
+  tmp = [{ label: currentTopic || "hiii", value: currentTopic || "hiii" }];
 
   return (
     <ThemeProvider isDark={colorScheme === "dark"}>
