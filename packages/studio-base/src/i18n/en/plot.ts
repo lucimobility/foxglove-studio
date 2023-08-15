@@ -28,6 +28,7 @@ export const plot = {
   showLine: "Show lines",
   min: "Min",
   max: "Max",
+  pointSize: "Point size",
   xAxis: "X Axis",
   value: "Value",
   index: "Index",

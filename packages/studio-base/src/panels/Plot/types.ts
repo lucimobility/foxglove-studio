@@ -31,6 +31,7 @@ export type PlotConfig = DeprecatedPlotConfig & {
   title?: string;
   paths: PlotPath[];
   xPaths?: PlotPath[];
+  pointSize?: number;
   minXValue?: number;
   maxXValue?: number;
   minYValue?: string | number;

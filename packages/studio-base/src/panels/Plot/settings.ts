@@ -105,6 +105,12 @@ function buildSettingsTree(config: PlotConfig, t: TFunction<"plot">): SettingsTr
       label: t("general"),
       fields: {
         isSynced: { label: t("syncWithOtherPlots"), input: "boolean", value: config.isSynced },
+        pointSize: {
+          label: t("pointSize"),
+          input: "number",
+          value: config.pointSize != undefined ? Number(config.pointSize) : undefined,
+          placeholder: "auto",
+        },
       },
     },
     legend: {
