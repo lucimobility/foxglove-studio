@@ -165,6 +165,7 @@ function buildSettingsTree(config: PlotConfig, t: TFunction<"plot">): SettingsTr
             { label: t("index"), value: "index" },
             { label: t("currentPath"), value: "currentCustom" },
             { label: t("accumulatedPath"), value: "custom" },
+            { label: t("currentSeries"), value: "currentSeries" },
           ],
         },
         xAxisPath:

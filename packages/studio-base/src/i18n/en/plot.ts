@@ -33,5 +33,6 @@ export const plot = {
   index: "Index",
   currentPath: "Path (current)",
   accumulatedPath: "Path (accumulated)",
+  currentSeries: "Series (current)",
   secondsRange: "Range (seconds)",
 };

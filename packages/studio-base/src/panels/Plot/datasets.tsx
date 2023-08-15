@@ -21,7 +21,7 @@ import {
 import { applyToDatum, MathFunction, mathFunctions } from "./transformPlotRange";
 
 const isCustomScale = (xAxisVal: PlotXAxisVal): boolean =>
-  xAxisVal === "custom" || xAxisVal === "currentCustom";
+  xAxisVal === "custom" || xAxisVal === "currentCustom" || xAxisVal === "currentSeries";
 
 function getXForPoint(
   xAxisVal: PlotXAxisVal,

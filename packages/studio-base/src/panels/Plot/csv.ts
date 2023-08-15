@@ -21,6 +21,7 @@ const getCVSColName = (xAxisVal: PlotXAxisVal): string => {
     index: "index",
     custom: "x value",
     currentCustom: "x value",
+    currentSeries: "x value",
   }[xAxisVal];
 };
 

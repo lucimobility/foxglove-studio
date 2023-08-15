@@ -30,6 +30,7 @@ export type PlotConfig = DeprecatedPlotConfig & {
   /** @deprecated Replaced by global panel rename functionality https://github.com/foxglove/studio/pull/5225 */
   title?: string;
   paths: PlotPath[];
+  xPaths?: PlotPath[];
   minXValue?: number;
   maxXValue?: number;
   minYValue?: string | number;

@@ -35,7 +35,8 @@ export type PlotXAxisVal =
   | "timestamp" // Message playback time. Preloaded.
   | "index" // Message-path value index. One "current" message at playback time.
   | "custom" // Message path data. Preloaded.
-  | "currentCustom"; // Message path data. One "current" message at playback time.
+  | "currentCustom" // Message path data. One "current" message at playback time.
+  | "currentSeries"; //
 
 // In addition to the base datum, we also add receiveTime and optionally header stamp to our datums
 // These are used in the csv export.

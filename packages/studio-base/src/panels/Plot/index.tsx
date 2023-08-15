@@ -103,6 +103,7 @@ function Plot(props: Props) {
     title: legacyTitle,
     followingViewWidth,
     paths: yAxisPaths,
+    xPaths: xAxisPaths,
     minXValue,
     maxXValue,
     minYValue,
@@ -136,7 +137,7 @@ function Plot(props: Props) {
     }
   }, [saveConfig, yAxisPaths.length]);
 
-  const showSingleCurrentMessage = xAxisVal === "currentCustom" || xAxisVal === "index";
+  const showSingleCurrentMessage = xAxisVal === "currentCustom" || xAxisVal === "index" || xAxisVal === "currentSeries";
 
   const startTime = useMessagePipeline(selectStartTime);
   const currentTime = useMessagePipeline(selectCurrentTime);
