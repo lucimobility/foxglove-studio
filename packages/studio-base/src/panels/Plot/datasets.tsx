@@ -8,6 +8,7 @@ import { Bounds, makeInvertedBounds } from "@foxglove/studio-base/types/Bounds";
 import { format } from "@foxglove/studio-base/util/formatTime";
 import { darkColor, getLineColor, lightColor } from "@foxglove/studio-base/util/plotColors";
 import { formatTimeRaw, TimestampMethod } from "@foxglove/studio-base/util/time";
+import { Point2 } from "@foxglove/schemas";
 
 import {
   BasePlotPath,
@@ -94,6 +95,15 @@ function getDatumsForMessagePathItem(
         headerStamp: yItem.headerStamp,
         value: `${format(value)} (${formatTimeRaw(value)})`,
         constantName,
+      });
+    } else if (typeof value === "object" && xAxisVal === "currentSeries") {
+      const pointValue = value as Point2;
+      data.push({
+        x: pointValue.x,
+        y: pointValue.y,
+        constantName,
+        receiveTime: yItem.receiveTime,
+        headerStamp: yItem.headerStamp,
       });
     }
   }

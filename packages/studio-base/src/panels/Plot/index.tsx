@@ -103,7 +103,6 @@ function Plot(props: Props) {
     title: legacyTitle,
     followingViewWidth,
     paths: yAxisPaths,
-    xPaths: xAxisPaths,
     minXValue,
     maxXValue,
     minYValue,

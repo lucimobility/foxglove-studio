@@ -10,7 +10,7 @@ import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SettingsTreeAction, SettingsTreeNode, SettingsTreeNodes } from "@foxglove/studio";
-import { PlotPath } from "@foxglove/studio-base/panels/Plot/internalTypes";
+import { PlotPath, PlotXAxisVal } from "@foxglove/studio-base/panels/Plot/internalTypes";
 import { usePanelSettingsTreeUpdate } from "@foxglove/studio-base/providers/PanelStateContextProvider";
 import { SaveConfig } from "@foxglove/studio-base/types/panels";
 import { lineColors } from "@foxglove/studio-base/util/plotColors";
@@ -18,7 +18,12 @@ import { lineColors } from "@foxglove/studio-base/util/plotColors";
 import { plotableRosTypes, PlotConfig, plotPathDisplayName } from "./types";
 
 const makeSeriesNode = memoizeWeak(
-  (path: PlotPath, index: number, t: TFunction<"plot">): SettingsTreeNode => {
+  (
+    path: PlotPath,
+    xAxisVal: PlotXAxisVal,
+    index: number,
+    t: TFunction<"plot">,
+  ): SettingsTreeNode => {
     return {
       actions: [
         {
@@ -36,7 +41,7 @@ const makeSeriesNode = memoizeWeak(
           label: t("messagePath"),
           input: "messagepath",
           value: path.value,
-          validTypes: plotableRosTypes,
+          validTypes: xAxisVal === "currentSeries" ? ["foxglove.Point2"] : plotableRosTypes,
           supportsMathModifiers: true,
         },
         label: {
@@ -69,9 +74,9 @@ const makeSeriesNode = memoizeWeak(
 );
 
 const makeRootSeriesNode = memoizeWeak(
-  (paths: PlotPath[], t: TFunction<"plot">): SettingsTreeNode => {
+  (paths: PlotPath[], xAxisVal: PlotXAxisVal, t: TFunction<"plot">): SettingsTreeNode => {
     const children = Object.fromEntries(
-      paths.map((path, index) => [`${index}`, makeSeriesNode(path, index, t)]),
+      paths.map((path, index) => [`${index}`, makeSeriesNode(path, xAxisVal, index, t)]),
     );
     return {
       label: t("series"),
@@ -209,7 +214,7 @@ function buildSettingsTree(config: PlotConfig, t: TFunction<"plot">): SettingsTr
         },
       },
     },
-    paths: makeRootSeriesNode(config.paths, t),
+    paths: makeRootSeriesNode(config.paths, config.xAxisVal, t),
   };
 }
 
