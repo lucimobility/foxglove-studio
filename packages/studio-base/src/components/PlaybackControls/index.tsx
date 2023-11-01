@@ -186,15 +186,13 @@ export default function PlaybackControls(props: {
         <Scrubber onSeek={seek} />
         <Stack direction="row" alignItems="center" flex={1} gap={1} overflowX="auto">
           <Stack direction="row" alignItems="center" flex={1} gap={0.5}>
-            {currentUserType !== "unauthenticated" && eventsSupported && (
-              <HoverableIconButton
-                size="small"
-                title="Create event"
-                icon={<EventOutlinedIcon />}
-                activeIcon={<EventIcon />}
-                onClick={toggleCreateEventDialog}
-              />
-            )}
+            <HoverableIconButton
+              size="small"
+              title="Create event"
+              icon={<EventOutlinedIcon />}
+              activeIcon={<EventIcon />}
+              onClick={toggleCreateEventDialog}
+            />
             <Tooltip
               // A desired workflow is the ability to copy data source info text (start, end, duration)
               // from the tooltip. However, there's a UX quirk where the tooltip will close if the user
@@ -261,7 +259,7 @@ export default function PlaybackControls(props: {
             <PlaybackSpeedControls />
           </Stack>
         </Stack>
-        {createEventDialogOpen && eventsSupported && (
+        {createEventDialogOpen && (
           <CreateEventDialog onClose={toggleCreateEventDialog} />
         )}
       </div>
