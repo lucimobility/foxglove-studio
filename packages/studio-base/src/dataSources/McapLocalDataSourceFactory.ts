@@ -2,12 +2,15 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
+import Logger from "@foxglove/log";
 import {
   IDataSourceFactory,
   DataSourceFactoryInitializeArgs,
 } from "@foxglove/studio-base/context/PlayerSelectionContext";
 import { IterablePlayer, WorkerIterableSource } from "@foxglove/studio-base/players/IterablePlayer";
 import { Player } from "@foxglove/studio-base/players/types";
+
+const log = Logger.getLogger(__filename);
 
 class McapLocalDataSourceFactory implements IDataSourceFactory {
   public id = "mcap-local-file";
@@ -24,6 +27,7 @@ class McapLocalDataSourceFactory implements IDataSourceFactory {
 
     const source = new WorkerIterableSource({
       initWorker: () => {
+        log.info("Initializing Mcap local data source factory", file);
         return new Worker(
           // foxglove-depcheck-used: babel-plugin-transform-import-meta
           new URL(

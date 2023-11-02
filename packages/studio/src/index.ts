@@ -127,6 +127,17 @@ export type MessageEvent<T = unknown> = {
   originalMessageEvent?: MessageEvent;
 };
 
+export type Attachment<T = unknown> = {
+  name: string;
+
+  data: T;
+
+  mediaType: string;
+
+  createTime?: Time;
+  logTime?: Time;
+};
+
 export interface LayoutActions {
   /** Open a new panel or update an existing panel in the layout.  */
   addPanel(params: {

@@ -8,11 +8,12 @@ import { Condvar } from "@foxglove/den/async";
 import { VecQueue } from "@foxglove/den/collection";
 import Log from "@foxglove/log";
 import { add as addTime, compare, clampTime } from "@foxglove/rostime";
-import { Time, MessageEvent } from "@foxglove/studio";
+import { Time, MessageEvent, Attachment } from "@foxglove/studio";
 import { Range } from "@foxglove/studio-base/util/ranges";
 
 import { CachingIterableSource } from "./CachingIterableSource";
 import {
+  GetAttachmentArgs,
   GetBackfillMessagesArgs,
   IIterableSource,
   Initalization,
@@ -288,6 +289,10 @@ class BufferedIterableSource extends EventEmitter<EventTypes> implements IIterab
         await self.stopProducer();
       }
     })();
+  }
+
+  public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    return await this.#source.getAttachments(args);
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

@@ -5,7 +5,8 @@
 import * as Comlink from "comlink";
 
 import { abortSignalTransferHandler } from "@foxglove/comlink-transfer-handlers";
-import { Immutable, MessageEvent, Time } from "@foxglove/studio";
+import Logger from "@foxglove/log";
+import { Attachment, Immutable, MessageEvent, Time } from "@foxglove/studio";
 
 import type {
   GetBackfillMessagesArgs,
@@ -15,8 +16,11 @@ import type {
   IteratorResult,
   MessageIteratorArgs,
   IterableSourceInitializeArgs,
+  GetAttachmentArgs,
 } from "./IIterableSource";
 import type { WorkerIterableSourceWorker } from "./WorkerIterableSourceWorker";
+
+const log = Logger.getLogger(__filename);
 
 Comlink.transferHandlers.set("abortsignal", abortSignalTransferHandler);
 
@@ -50,6 +54,7 @@ export class WorkerIterableSource implements IIterableSource {
   public async *messageIterator(
     args: MessageIteratorArgs,
   ): AsyncIterableIterator<Readonly<IteratorResult>> {
+    log.info("in workeriterablesource messageiterator function");
     if (this.#worker == undefined) {
       throw new Error(`WorkerIterableSource is not initialized`);
     }
@@ -72,6 +77,15 @@ export class WorkerIterableSource implements IIterableSource {
     }
   }
 
+  public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    log.info("in workeriterablesource messageiterator function");
+    if (this.#worker == undefined) {
+      throw new Error(`WorkerIterableSource is not initialized`);
+    }
+
+    return await this.#worker.getAttachments(args);
+  }
+
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {
     if (this.#worker == undefined) {
       throw new Error(`WorkerIterableSource is not initialized`);
@@ -81,6 +95,7 @@ export class WorkerIterableSource implements IIterableSource {
     // to our worker getBackfillMessages call. Our installed Comlink handler for AbortSignal handles
     // making the abort signal available within the worker.
     const { abortSignal, ...rest } = args;
+    log.info("getting back fill messages");
     return await this.#worker.getBackfillMessages(rest, abortSignal);
   }
 
@@ -100,6 +115,7 @@ export class WorkerIterableSource implements IIterableSource {
     const cursor: IMessageCursor = {
       async next() {
         const messageCursor = await messageCursorPromise;
+        log.info(messageCursor);
         return await messageCursor.next();
       },
 
@@ -122,6 +138,8 @@ export class WorkerIterableSource implements IIterableSource {
         }
       },
     };
+
+    log.info(cursor);
 
     return cursor;
   }

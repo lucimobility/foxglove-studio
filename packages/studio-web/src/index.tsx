@@ -30,7 +30,7 @@ export type MainParams = {
 };
 
 export async function main(getParams: () => Promise<MainParams> = async () => ({})): Promise<void> {
-  log.debug("initializing");
+  log.info("initializing");
 
   window.onerror = (...args) => {
     console.error(...args);

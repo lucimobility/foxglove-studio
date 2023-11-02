@@ -17,8 +17,9 @@ import {
   toRFC3339String,
   compare,
 } from "@foxglove/rostime";
-import { MessageEvent } from "@foxglove/studio";
+import { Attachment, MessageEvent } from "@foxglove/studio";
 import {
+  GetAttachmentArgs,
   GetBackfillMessagesArgs,
   IIterableSource,
   Initalization,
@@ -58,6 +59,7 @@ export class McapUnindexedIterableSource implements IIterableSource {
 
     let messageCount = 0;
     const messagesByChannel = new Map<number, MessageEvent[]>();
+    const attachments: Attachment[] = [];
     const schemasById = new Map<number, McapTypes.TypedMcapRecords["Schema"]>();
     const channelInfoById = new Map<
       number,
@@ -151,6 +153,17 @@ export class McapUnindexedIterableSource implements IIterableSource {
             message: channelInfo.parsedChannel.deserialize(record.data),
             sizeInBytes: record.data.byteLength,
             schemaName: channelInfo.schemaName ?? "",
+          });
+          break;
+        }
+
+        case "Attachment": {
+          attachments.push({
+            name: record.name,
+            logTime: fromNanoSec(record.logTime),
+            // createTime: fromNanoSec(record.createTime),
+            mediaType: record.mediaType,
+            data: record.data,
           });
           break;
         }
@@ -273,6 +286,23 @@ export class McapUnindexedIterableSource implements IIterableSource {
     resultMessages.sort((a, b) => compare(a.msgEvent.receiveTime, b.msgEvent.receiveTime));
 
     yield* resultMessages;
+  }
+
+  public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    if (!this.#msgEventsByChannel) {
+      throw new Error("initialization not completed");
+    }
+
+    const needTopics = args.topics;
+    const msgEventsByTopic = new Map<string, MessageEvent>();
+    for (const [, msgEvents] of this.#msgEventsByChannel) {
+      for (const msgEvent of msgEvents) {
+        if (compare(msgEvent.receiveTime, args.time) <= 0 && needTopics.has(msgEvent.topic)) {
+          msgEventsByTopic.set(msgEvent.topic, msgEvent);
+        }
+      }
+    }
+    return [...msgEventsByTopic.values()];
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

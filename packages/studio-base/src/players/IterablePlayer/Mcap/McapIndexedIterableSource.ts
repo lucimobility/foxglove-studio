@@ -8,8 +8,9 @@ import { pickFields } from "@foxglove/den/records";
 import Logger from "@foxglove/log";
 import { ParsedChannel, parseChannel } from "@foxglove/mcap-support";
 import { Time, fromNanoSec, toNanoSec, compare } from "@foxglove/rostime";
-import { MessageEvent } from "@foxglove/studio";
+import { Attachment, MessageEvent } from "@foxglove/studio";
 import {
+  GetAttachmentArgs,
   GetBackfillMessagesArgs,
   IIterableSource,
   Initalization,
@@ -137,6 +138,15 @@ export class McapIndexedIterableSource implements IIterableSource {
       topics: topicNames,
       validateCrcs: false,
     })) {
+      // for await (const attachment of this.#reader.readAttachments({
+      //   startTime: 1698267155504800171n,
+      //   endTime: 1698267155505236253n,
+      //   name: "chair.toml",
+      //   mediaType: "application/toml",
+      //   validateCrcs: false,
+      // })) {
+      //   log.info(attachment);
+      // }
       const channelInfo = this.#channelInfoById.get(message.channelId);
       if (!channelInfo) {
         yield {
@@ -153,6 +163,7 @@ export class McapIndexedIterableSource implements IIterableSource {
         const msg = channelInfo.parsedChannel.deserialize(message.data) as Record<string, unknown>;
         const spec = args.topics.get(channelInfo.channel.topic);
         const payload = spec?.fields != undefined ? pickFields(msg, spec.fields) : msg;
+        // log.info(msg);
         yield {
           type: "message-event",
           msgEvent: {
@@ -179,6 +190,38 @@ export class McapIndexedIterableSource implements IIterableSource {
         };
       }
     }
+  }
+
+  public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    const { name, mediaType } = args;
+
+    const attachments: Attachment[] = [];
+    // for (const topic of topics.keys()) {
+    // NOTE: An iterator is made for each topic to get the latest message on that topic.
+    // An single iterator for all the topics could result in iterating through many
+    // irrelevant messages to get to an older message on a topic.
+    for await (const attachment of this.#reader.readAttachments({
+      name,
+      mediaType,
+      // startTime: toNanoSec(time),
+    })) {
+      try {
+        attachments.push({
+          name: attachment.name,
+          mediaType: attachment.mediaType,
+          logTime: fromNanoSec(attachment.logTime),
+          // createTime: fromNanoSec(attachment.createTime),
+          data: attachment.data,
+        });
+      } catch (err) {
+        log.error(err);
+      }
+
+      break;
+    }
+
+    log.info(attachments);
+    return attachments;
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

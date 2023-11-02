@@ -19,7 +19,7 @@ import {
   toRFC3339String,
   toString,
 } from "@foxglove/rostime";
-import { MessageEvent, ParameterValue } from "@foxglove/studio";
+import { Attachment, MessageEvent, ParameterValue } from "@foxglove/studio";
 import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsCollector";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
@@ -117,6 +117,7 @@ export class IterablePlayer implements Player {
   #speed: number = 1.0;
   #start?: Time;
   #end?: Time;
+  #attachmentStartTime?: Time;
   #enablePreload = true;
 
   // next read start time indicates where to start reading for the next tick
@@ -162,6 +163,8 @@ export class IterablePlayer implements Player {
 
   // The iterator for reading messages during playback
   #playbackIterator?: AsyncIterator<Readonly<IteratorResult>>;
+
+  #attachments?: Attachment[];
 
   #blockLoader?: BlockLoader;
   #blockLoadingProcess?: Promise<void>;
@@ -573,7 +576,7 @@ export class IterablePlayer implements Player {
     // set the playIterator to the seek time
     await this.#bufferedSource.stopProducer();
 
-    log.debug("Initializing forward iterator from", next);
+    log.info("Initializing forward iterator from", next);
     this.#playbackIterator = this.#bufferedSource.messageIterator({
       topics: this.#allTopics,
       start: next,
@@ -616,11 +619,18 @@ export class IterablePlayer implements Player {
       throw new Error("Invariant. playbackIterator was already set");
     }
 
-    log.debug("Initializing forward iterator from", this.#start);
+    log.info("Initializing forward iterator from", this.#start);
     this.#playbackIterator = this.#bufferedSource.messageIterator({
       topics: this.#allTopics,
       start: this.#start,
       consumptionType: "partial",
+    });
+
+    log.info("Initializing attachment iterator from", this.#start);
+    this.#attachments = await this.#iterableSource.getAttachments({
+      name: "chair.toml",
+      mediaType: "application/toml",
+      time: this.#attachmentStartTime!,
     });
 
     this.#lastMessageEvent = undefined;
@@ -708,6 +718,14 @@ export class IterablePlayer implements Player {
     }, 100);
 
     try {
+      const attachments = await this.#bufferedSource.getAttachments({
+        name: "chair.toml",
+        mediaType: "application/toml",
+        time: this.#attachmentStartTime!,
+      });
+
+      this.#attachments = attachments;
+
       this.#abort = new AbortController();
       const messages = await this.#bufferedSource.getBackfillMessages({
         topics: this.#allTopics,
