@@ -50,9 +50,14 @@ export class McapIndexedIterableSource implements IIterableSource {
 
     const topicStats = new Map<string, TopicStats>();
     const topicsByName = new Map<string, Topic>();
+    const attachmentNames: string[] = [];
     const datatypes: RosDatatypes = new Map();
     const problems: PlayerProblem[] = [];
     const publishersByTopic = new Map<string, Set<string>>();
+
+    for (const attachmentIndex of this.#reader.attachmentIndexes.values()) {
+      attachmentNames.push(attachmentIndex.name);
+    }
 
     for (const channel of this.#reader.channelsById.values()) {
       const schema = this.#reader.schemasById.get(channel.schemaId);
@@ -112,6 +117,7 @@ export class McapIndexedIterableSource implements IIterableSource {
       start: this.#start,
       end: this.#end,
       topics: [...topicsByName.values()],
+      attachmentNames,
       datatypes,
       profile: this.#reader.header.profile,
       problems,
@@ -194,61 +200,68 @@ export class McapIndexedIterableSource implements IIterableSource {
   }
 
   public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
-    const { name, mediaType } = args;
+    const { names } = args;
+
+    const attachmentNames = Array.from(names.keys());
 
     const attachments: Attachment[] = [];
     // for (const topic of topics.keys()) {
     // NOTE: An iterator is made for each topic to get the latest message on that topic.
     // An single iterator for all the topics could result in iterating through many
     // irrelevant messages to get to an older message on a topic.
-    for await (const attachment of this.#reader.readAttachments({
-      name,
-      mediaType,
-      // startTime: toNanoSec(time),
-    })) {
-      try {
-        attachments.push({
-          name: attachment.name,
-          mediaType: attachment.mediaType,
-          logTime: fromNanoSec(attachment.logTime),
-          // createTime: fromNanoSec(attachment.createTime),
-          data: attachment.data,
-        });
-      } catch (err) {
-        log.error(err);
-      }
 
-      break;
+    for await (const name of attachmentNames) {
+      for await (const attachment of this.#reader.readAttachments({
+        name,
+        // startTime: toNanoSec(time),
+      })) {
+        try {
+          attachments.push({
+            name: attachment.name,
+            mediaType: attachment.mediaType,
+            logTime: fromNanoSec(attachment.logTime),
+            data: attachment.data,
+          });
+        } catch (err) {
+          log.error(err);
+        }
+
+        break;
+      }
     }
 
-    log.info(attachments);
+    log.info("attachments: ", attachments);
     return attachments;
   }
 
   public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
-    const { name } = args;
+    const { names } = args;
+
+    const metadataNames = Array.from(names.keys());
 
     const metadataList: Metadata[] = [];
     // for (const topic of topics.keys()) {
     // NOTE: An iterator is made for each topic to get the latest message on that topic.
     // An single iterator for all the topics could result in iterating through many
     // irrelevant messages to get to an older message on a topic.
-    for await (const metadata of this.#reader.readMetadata({
-      name,
-    })) {
-      try {
-        metadataList.push({
-          name: metadata.name,
-          metadata: metadata.metadata,
-        });
-      } catch (err) {
-        log.error(err);
-      }
+    for await (const name of metadataNames) {
+      for await (const metadata of this.#reader.readMetadata({
+        name,
+      })) {
+        try {
+          metadataList.push({
+            name: metadata.name,
+            metadata: metadata.metadata,
+          });
+        } catch (err) {
+          log.error(err);
+        }
 
-      break;
+        break;
+      }
     }
 
-    log.info(metadataList);
+    log.info("metadata: ", metadataList);
     return metadataList;
   }
 
@@ -289,6 +302,7 @@ export class McapIndexedIterableSource implements IIterableSource {
       }
     }
     messages.sort((a, b) => compare(a.receiveTime, b.receiveTime));
+    log.info("backfill messages: ", messages);
     return messages;
   }
 }

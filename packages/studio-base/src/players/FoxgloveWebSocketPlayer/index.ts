@@ -14,7 +14,7 @@ import CommonRosTypes from "@foxglove/rosmsg-msgs-common";
 import { MessageWriter as Ros1MessageWriter } from "@foxglove/rosmsg-serialization";
 import { MessageWriter as Ros2MessageWriter } from "@foxglove/rosmsg2-serialization";
 import { fromMillis, fromNanoSec, isGreaterThan, isLessThan, Time } from "@foxglove/rostime";
-import { ParameterValue } from "@foxglove/studio";
+import { Attachment, ParameterValue } from "@foxglove/studio";
 import { Asset } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
@@ -113,6 +113,8 @@ export default class FoxgloveWebSocketPlayer implements Player {
   #numTimeSeeks = 0;
   #profile?: string;
   #urlState: PlayerState["urlState"];
+
+  #parsedAttachments: Attachment[] = [];
 
   /** Earliest time seen */
   #startTime?: Time;
@@ -858,6 +860,9 @@ export default class FoxgloveWebSocketPlayer implements Player {
     const messages = this.#parsedMessages;
     this.#parsedMessages = [];
     this.#parsedMessagesBytes = 0;
+
+    const attachments = this.#parsedAttachments;
+    this.#parsedAttachments = [];
     return this.#listener({
       name: this.#name,
       presence: this.#presence,
@@ -870,6 +875,7 @@ export default class FoxgloveWebSocketPlayer implements Player {
 
       activeData: {
         messages,
+        attachments,
         totalBytesReceived: this.#receivedBytes,
         startTime: this.#startTime,
         endTime: this.#endTime,

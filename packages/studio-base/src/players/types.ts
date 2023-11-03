@@ -13,7 +13,7 @@
 
 import { MessageDefinition } from "@foxglove/message-definition";
 import { Time } from "@foxglove/rostime";
-import type { MessageEvent, ParameterValue } from "@foxglove/studio";
+import type { Attachment, MessageEvent, ParameterValue } from "@foxglove/studio";
 import { Immutable } from "@foxglove/studio";
 import { Asset } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import { GlobalVariables } from "@foxglove/studio-base/hooks/useGlobalVariables";
@@ -33,6 +33,10 @@ export type ParsedMessageDefinitionsByTopic = {
 };
 
 export type TopicSelection = Map<string, SubscribePayload>;
+
+export type AttachmentNameSelection = Map<string, SubscribePayload>;
+
+export type MetadataNameSelection = Map<string, SubscribePayload>;
 
 // A `Player` is a class that manages playback state. It manages subscriptions,
 // current time, which topics and datatypes are available, and so on.
@@ -142,6 +146,8 @@ export type PlayerStateActiveData = {
   messages: readonly MessageEvent[];
   totalBytesReceived: number; // always-increasing
 
+  attachments: readonly Attachment[];
+
   // The current playback position, which will be shown in the playback bar. This time should be
   // equal to or later than the latest `receiveTime` in `messages`. Why not just use
   // `last(messages).receiveTime`? The reason is that the data source (e.g. ROS bag) might have
@@ -177,6 +183,8 @@ export type PlayerStateActiveData = {
   // isn't represented in this list. Finally, every topic must have a `datatype` which is actually
   // present in the `datatypes` field (see below).
   topics: Topic[];
+
+  attachmentNames: string[];
 
   // A map of topic names to topic statistics, such as message count. This should be treated as a
   // sparse list that may be missing some or all topics, depending on the active data source and its
@@ -290,6 +298,25 @@ export type SubscribePayload = {
    * The name of the topic to subscribe to.
    */
   topic: string;
+  /**
+   * If defined the source will return only these fields from messages.
+   * Otherwise entire messages will be returned.
+   */
+  fields?: string[];
+  /**
+   * Defines the range of messages to subscribe to.
+   */
+  preloadType?: SubscriptionPreloadType;
+};
+
+/**
+ * Represents a subscription to a single attachment, for use in `setAttachmentSubscriptions`.
+ */
+export type SubscribeAttachmentPayload = {
+  /**
+   * The name of the topic to subscribe to.
+   */
+  name: string;
   /**
    * If defined the source will return only these fields from messages.
    * Otherwise entire messages will be returned.

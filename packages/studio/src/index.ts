@@ -577,6 +577,13 @@ export type SettingsTreeFieldValue =
       supportsMathModifiers?: boolean;
     }
   | {
+      input: "attachment";
+      value?: string;
+      validTypes?: string[];
+      /** True if the input should allow math modifiers like @abs. */
+      supportsMathModifiers?: boolean;
+    }
+  | {
       input: "number";
       value?: number;
       step?: number;

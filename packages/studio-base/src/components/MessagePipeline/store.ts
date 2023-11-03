@@ -126,6 +126,7 @@ export function createMessagePipelineStore({
           messageEventsBySubscriberId: new Map(),
           subscriptions: [],
           sortedTopics: [],
+          attachmentNames: [],
           datatypes: new Map(),
           startPlayback: undefined,
           playUntil: undefined,
@@ -141,6 +142,7 @@ export function createMessagePipelineStore({
       messageEventsBySubscriberId: new Map(),
       subscriptions: [],
       sortedTopics: [],
+      attachmentNames: [],
       datatypes: new Map(),
       setSubscriptions(id, payloads) {
         get().dispatch({ type: "update-subscriber", id, payloads });
@@ -351,6 +353,14 @@ function updatePlayerStateAction(
       ? [...topics].sort((a, b) => a.name.localeCompare(b.name))
       : [];
   }
+
+  const attachmentNames = action.playerState.activeData?.attachmentNames;
+  if (attachmentNames !== prevState.public.playerState.activeData?.attachmentNames) {
+    newPublicState.attachmentNames = attachmentNames
+      ? [...attachmentNames].sort((a, b) => a.localeCompare(b))
+      : [];
+  }
+
   if (
     action.playerState.activeData?.datatypes !== prevState.public.playerState.activeData?.datatypes
   ) {

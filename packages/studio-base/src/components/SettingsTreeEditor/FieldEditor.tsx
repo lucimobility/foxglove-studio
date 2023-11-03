@@ -297,6 +297,24 @@ function FieldInput({
           validTypes={field.validTypes}
         />
       );
+    case "attachment":
+      return (
+        <MessagePathInput
+          variant="filled"
+          path={field.value ?? ""}
+          disabled={field.disabled}
+          readOnly={field.readonly}
+          supportsMathModifiers={field.supportsMathModifiers}
+          onChange={(value) => {
+            actionHandler({
+              action: "update",
+              payload: { path, input: "messagepath", value },
+            });
+          }}
+          validTypes={field.validTypes}
+          attachment={true}
+        />
+      );
     case "select": {
       const selectedOptionIndex = // use findIndex instead of find to avoid confusing TypeScript with union of arrays
         field.options.findIndex((option) => option.value === field.value);

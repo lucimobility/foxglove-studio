@@ -18,6 +18,7 @@ type ResumeFrame = () => void;
 export type MessagePipelineContext = Immutable<{
   playerState: PlayerState;
   sortedTopics: Topic[];
+  attachmentNames: string[];
   datatypes: RosDatatypes;
   subscriptions: SubscribePayload[];
   messageEventsBySubscriberId: Map<string, MessageEvent[]>;

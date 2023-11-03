@@ -5,6 +5,8 @@
 import { Time } from "@foxglove/rostime";
 import { Attachment, Immutable, MessageEvent, Metadata } from "@foxglove/studio";
 import {
+  AttachmentNameSelection,
+  MetadataNameSelection,
   PlayerProblem,
   Topic,
   TopicSelection,
@@ -16,6 +18,7 @@ export type Initalization = {
   start: Time;
   end: Time;
   topics: Topic[];
+  attachmentNames: string[];
   topicStats: Map<string, TopicStats>;
   datatypes: RosDatatypes;
   profile: string | undefined;
@@ -98,13 +101,12 @@ export type GetBackfillMessagesArgs = {
 };
 
 export type GetAttachmentArgs = {
-  name: string;
-  mediaType: string;
+  names: TopicSelection;
   time: Time;
 };
 
 export type GetMetadataArgs = {
-  name: string;
+  names: MetadataNameSelection;
 };
 
 // IMessageCursor describes an interface for message cursors. Message cursors are a similar concept
