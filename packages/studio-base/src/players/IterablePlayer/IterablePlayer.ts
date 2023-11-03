@@ -19,7 +19,7 @@ import {
   toRFC3339String,
   toString,
 } from "@foxglove/rostime";
-import { Attachment, MessageEvent, ParameterValue } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
 import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsCollector";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
@@ -165,6 +165,7 @@ export class IterablePlayer implements Player {
   #playbackIterator?: AsyncIterator<Readonly<IteratorResult>>;
 
   #attachments?: Attachment[];
+  #metadata?: Metadata[];
 
   #blockLoader?: BlockLoader;
   #blockLoadingProcess?: Promise<void>;
@@ -633,6 +634,10 @@ export class IterablePlayer implements Player {
       time: this.#attachmentStartTime!,
     });
 
+    this.#metadata = await this.#iterableSource.getMetadata({
+      name: "chair.toml",
+    });
+
     this.#lastMessageEvent = undefined;
     this.#messages = [];
 
@@ -718,13 +723,15 @@ export class IterablePlayer implements Player {
     }, 100);
 
     try {
-      const attachments = await this.#bufferedSource.getAttachments({
+      this.#attachments = await this.#bufferedSource.getAttachments({
         name: "chair.toml",
         mediaType: "application/toml",
         time: this.#attachmentStartTime!,
       });
 
-      this.#attachments = attachments;
+      this.#metadata = await this.#bufferedSource.getMetadata({
+        name: "chair.toml",
+      });
 
       this.#abort = new AbortController();
       const messages = await this.#bufferedSource.getBackfillMessages({

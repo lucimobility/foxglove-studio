@@ -6,7 +6,7 @@ import { McapIndexedReader, McapTypes } from "@mcap/core";
 
 import Log from "@foxglove/log";
 import { loadDecompressHandlers } from "@foxglove/mcap-support";
-import { Attachment } from "@foxglove/studio";
+import { Attachment, Metadata } from "@foxglove/studio";
 import { MessageEvent } from "@foxglove/studio-base/players/types";
 
 import { BlobReadable } from "./BlobReadable";
@@ -20,6 +20,7 @@ import {
   MessageIteratorArgs,
   GetBackfillMessagesArgs,
   GetAttachmentArgs,
+  GetMetadataArgs,
 } from "../IIterableSource";
 
 const log = Log.getLogger(__filename);
@@ -121,6 +122,14 @@ export class McapIterableSource implements IIterableSource {
     }
 
     return await this.#sourceImpl.getAttachments(args);
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
+    if (!this.#sourceImpl) {
+      throw new Error("Invariant: uninitialized");
+    }
+
+    return await this.#sourceImpl.getMetadata(args);
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

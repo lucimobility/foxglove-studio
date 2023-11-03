@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Time } from "@foxglove/rostime";
-import { Attachment, Immutable, MessageEvent } from "@foxglove/studio";
+import { Attachment, Immutable, MessageEvent, Metadata } from "@foxglove/studio";
 import {
   PlayerProblem,
   Topic,
@@ -103,6 +103,10 @@ export type GetAttachmentArgs = {
   time: Time;
 };
 
+export type GetMetadataArgs = {
+  name: string;
+};
+
 // IMessageCursor describes an interface for message cursors. Message cursors are a similar concept
 // to javascript generators but provide a method for reading a batch of messages rather than one
 // message.
@@ -177,6 +181,8 @@ export interface IIterableSource {
   ): AsyncIterableIterator<Readonly<IteratorResult>>;
 
   getAttachments(args: Immutable<GetAttachmentArgs>): Promise<Attachment[]>;
+
+  getMetadata(args: Immutable<GetMetadataArgs>): Promise<Metadata[]>;
 
   /**
    * Load the most recent messages per topic that occurred before or at the target time, if

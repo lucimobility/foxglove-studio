@@ -5,11 +5,12 @@
 import * as Comlink from "comlink";
 
 import { abortSignalTransferHandler } from "@foxglove/comlink-transfer-handlers";
-import { Attachment, Immutable, MessageEvent } from "@foxglove/studio";
+import { Attachment, Immutable, MessageEvent, Metadata } from "@foxglove/studio";
 
 import type {
   GetAttachmentArgs,
   GetBackfillMessagesArgs,
+  GetMetadataArgs,
   IIterableSource,
   IMessageCursor,
   Initalization,
@@ -37,6 +38,10 @@ export class WorkerIterableSourceWorker implements IIterableSource {
 
   public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
     return await this._source.getAttachments(args);
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
+    return await this._source.getMetadata(args);
   }
 
   public async getBackfillMessages(

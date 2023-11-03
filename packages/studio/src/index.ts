@@ -138,6 +138,12 @@ export type Attachment<T = unknown> = {
   logTime?: Time;
 };
 
+export type Metadata = {
+  name: string;
+
+  metadata: Map<string, string>;
+};
+
 export interface LayoutActions {
   /** Open a new panel or update an existing panel in the layout.  */
   addPanel(params: {

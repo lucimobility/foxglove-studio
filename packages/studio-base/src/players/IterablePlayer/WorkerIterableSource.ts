@@ -6,7 +6,7 @@ import * as Comlink from "comlink";
 
 import { abortSignalTransferHandler } from "@foxglove/comlink-transfer-handlers";
 import Logger from "@foxglove/log";
-import { Attachment, Immutable, MessageEvent, Time } from "@foxglove/studio";
+import { Attachment, Immutable, MessageEvent, Metadata, Time } from "@foxglove/studio";
 
 import type {
   GetBackfillMessagesArgs,
@@ -17,6 +17,7 @@ import type {
   MessageIteratorArgs,
   IterableSourceInitializeArgs,
   GetAttachmentArgs,
+  GetMetadataArgs,
 } from "./IIterableSource";
 import type { WorkerIterableSourceWorker } from "./WorkerIterableSourceWorker";
 
@@ -84,6 +85,15 @@ export class WorkerIterableSource implements IIterableSource {
     }
 
     return await this.#worker.getAttachments(args);
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
+    log.info("in workeriterablesource messageiterator function");
+    if (this.#worker == undefined) {
+      throw new Error(`WorkerIterableSource is not initialized`);
+    }
+
+    return await this.#worker.getMetadata(args);
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

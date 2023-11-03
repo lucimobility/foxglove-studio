@@ -8,10 +8,11 @@ import { pickFields } from "@foxglove/den/records";
 import Logger from "@foxglove/log";
 import { ParsedChannel, parseChannel } from "@foxglove/mcap-support";
 import { Time, fromNanoSec, toNanoSec, compare } from "@foxglove/rostime";
-import { Attachment, MessageEvent } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata } from "@foxglove/studio";
 import {
   GetAttachmentArgs,
   GetBackfillMessagesArgs,
+  GetMetadataArgs,
   IIterableSource,
   Initalization,
   IteratorResult,
@@ -222,6 +223,33 @@ export class McapIndexedIterableSource implements IIterableSource {
 
     log.info(attachments);
     return attachments;
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
+    const { name } = args;
+
+    const metadataList: Metadata[] = [];
+    // for (const topic of topics.keys()) {
+    // NOTE: An iterator is made for each topic to get the latest message on that topic.
+    // An single iterator for all the topics could result in iterating through many
+    // irrelevant messages to get to an older message on a topic.
+    for await (const metadata of this.#reader.readMetadata({
+      name,
+    })) {
+      try {
+        metadataList.push({
+          name: metadata.name,
+          metadata: metadata.metadata,
+        });
+      } catch (err) {
+        log.error(err);
+      }
+
+      break;
+    }
+
+    log.info(metadataList);
+    return metadataList;
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

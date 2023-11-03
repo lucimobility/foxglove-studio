@@ -17,10 +17,11 @@ import {
   toRFC3339String,
   compare,
 } from "@foxglove/rostime";
-import { Attachment, MessageEvent } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata } from "@foxglove/studio";
 import {
   GetAttachmentArgs,
   GetBackfillMessagesArgs,
+  GetMetadataArgs,
   IIterableSource,
   Initalization,
   IteratorResult,
@@ -289,6 +290,23 @@ export class McapUnindexedIterableSource implements IIterableSource {
   }
 
   public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    if (!this.#msgEventsByChannel) {
+      throw new Error("initialization not completed");
+    }
+
+    const needTopics = args.topics;
+    const msgEventsByTopic = new Map<string, MessageEvent>();
+    for (const [, msgEvents] of this.#msgEventsByChannel) {
+      for (const msgEvent of msgEvents) {
+        if (compare(msgEvent.receiveTime, args.time) <= 0 && needTopics.has(msgEvent.topic)) {
+          msgEventsByTopic.set(msgEvent.topic, msgEvent);
+        }
+      }
+    }
+    return [...msgEventsByTopic.values()];
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
     if (!this.#msgEventsByChannel) {
       throw new Error("initialization not completed");
     }
