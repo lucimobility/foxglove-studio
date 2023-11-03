@@ -19,6 +19,7 @@ import {
   PlayerCapabilities,
   PlayerPresence,
   PlayerState,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import { assertNever } from "@foxglove/studio-base/util/assertNever";
@@ -76,6 +77,11 @@ type UpdateSubscriberAction = {
   id: string;
   payloads: Immutable<SubscribePayload[]>;
 };
+type UpdateAttachmentSubscriberAction = {
+  type: "update-attachment-subscriber";
+  id: string;
+  payloads: Immutable<SubscribeAttachmentPayload[]>;
+};
 type UpdatePlayerStateAction = {
   type: "update-player-state";
   playerState: PlayerState;
@@ -85,6 +91,7 @@ type UpdatePlayerStateAction = {
 export type MessagePipelineStateAction =
   | UpdateSubscriberAction
   | UpdatePlayerStateAction
+  | UpdateAttachmentSubscriberAction
   | { type: "set-publishers"; id: string; payloads: AdvertiseOptions[] };
 
 export function createMessagePipelineStore({
@@ -147,6 +154,9 @@ export function createMessagePipelineStore({
       setSubscriptions(id, payloads) {
         get().dispatch({ type: "update-subscriber", id, payloads });
       },
+      setAttachmentSubscriptions(id, payloads) {
+        get().dispatch({ type: "update-attachment-subscriber", id, payloads });
+      },
       setPublishers(id, payloads) {
         get().dispatch({ type: "set-publishers", id, payloads });
         get().player?.setPublishers(get().allPublishers);
@@ -205,6 +215,7 @@ export function createMessagePipelineStore({
           condvar.notifyAll();
         };
       },
+      attachmentSubscriptions: [],
     },
   }));
 }

@@ -13,7 +13,7 @@ import { CreateEventDialog } from "./CreateEventDialog";
 export default {
   component: CreateEventDialog,
   title: "components/CreateEventDialog",
-  args: { onClose: () => {} },
+  args: { onClose: () => { } },
   decorators: [
     (Wrapped: StoryFn): JSX.Element => {
       return (

@@ -341,9 +341,9 @@ function WorkspaceContent(props: WorkspaceProps): JSX.Element {
           badge:
             playerProblems && playerProblems.length > 0
               ? {
-                  count: playerProblems.length,
-                  color: "error",
-                }
+                count: playerProblems.length,
+                color: "error",
+              }
               : undefined,
         },
       ],

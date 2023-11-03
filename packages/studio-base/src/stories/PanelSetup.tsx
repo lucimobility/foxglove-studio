@@ -76,7 +76,7 @@ import { SavedProps, UserScripts } from "@foxglove/studio-base/types/panels";
 
 import "react-mosaic-component/react-mosaic-component.css";
 
-function noop() {}
+function noop() { }
 
 type Frame = {
   [topic: string]: MessageEvent[];
@@ -243,9 +243,9 @@ function UnconnectedPanelSetup(props: UnconnectedProps): JSX.Element | ReactNull
     get() {
       return undefined;
     },
-    async set() {},
-    addChangeListener() {},
-    removeChangeListener() {},
+    async set() { },
+    addChangeListener() { },
+    removeChangeListener() { },
   }));
 
   const actions = useCurrentLayoutActions();

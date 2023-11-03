@@ -15,6 +15,7 @@ import { useTheme } from "@mui/material";
 import * as _ from "lodash-es";
 import { ComponentProps, useCallback, useEffect, useMemo, useState } from "react";
 
+import Logger from "@foxglove/log";
 import {
   Time,
   add as addTimes,
@@ -53,6 +54,8 @@ import useDatasets from "./useDatasets";
 
 export { plotableRosTypes } from "./types";
 export type { PlotConfig } from "./types";
+
+const log = Logger.getLogger(__filename);
 
 const defaultSidebarDimension = 240;
 
@@ -220,6 +223,7 @@ function Plot(props: Props) {
     pathsWithMismatchedDataLengths,
   } = useMemo(() => {
     const data = plotData ?? EmptyPlotData;
+    // log.info(yAxisPaths);
     return {
       bounds: data.bounds,
       pathsWithMismatchedDataLengths: data.pathsWithMismatchedDataLengths,

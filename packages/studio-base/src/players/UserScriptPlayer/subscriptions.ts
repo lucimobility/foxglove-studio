@@ -6,11 +6,12 @@ import * as R from "ramda";
 
 import { Immutable } from "@foxglove/studio";
 import { mergeSubscriptions } from "@foxglove/studio-base/components/MessagePipeline/subscriptions";
-import { SubscribePayload } from "@foxglove/studio-base/players/types";
+import { SubscribeAttachmentPayload, SubscribePayload } from "@foxglove/studio-base/players/types";
 
 // A mapping from the subscription to the input topics needed to satisfy
 // that request.
 type SubscriberInputs = [SubscribePayload, readonly string[] | undefined];
+type SubscriberAttachmentInputs = [SubscribeAttachmentPayload, readonly string[] | undefined];
 
 /**
  * Calculates a mapping from topic name to a SubscribePayload containing the
@@ -72,3 +73,43 @@ export function remapVirtualSubscriptions(
     mergeSubscriptions,
   )(payloadInputsPairs);
 }
+
+// /**
+//  * Rewrites the provided array of subscriptions to omit subscriptions to
+//  * virtual topics and subscribe only to the inputs to those topics, then
+//  * deduplicates.
+//  */
+// export function remapVirtualAttachmentSubscriptions(
+//   subscriptions: SubscribeAttachmentPayload[],
+//   inputsByOutputTopic: Map<string, readonly string[]>,
+// ): Immutable<SubscribeAttachmentPayload[]> {
+//   // Pair all subscriptions with their user script input topics (if any)
+//   const payloadInputsPairs = R.pipe(
+//     R.map(
+//       (v: SubscribeAttachmentPayload): SubscriberAttachmentInputs => [
+//         v,
+//         inputsByOutputTopic.get(v.name),
+//       ],
+//     ),
+//     R.filter(([, topics]: SubscriberAttachmentInputs) => topics?.length !== 0),
+//   )(subscriptions);
+
+//   return R.pipe(
+//     R.chain(([subscription, names]: SubscriberAttachmentInputs): SubscribeAttachmentPayload[] => {
+//       const preloadType = subscription.preloadType ?? "partial";
+
+//       // Leave the subscription unmodified if it is not a user script topic
+//       if (names == undefined) {
+//         return [subscription];
+//       }
+
+//       // Subscribe to all fields for all topics used by this user script
+//       // because we can't know what fields the user script actually uses
+//       // (for now)
+//       return names.map((v) => ({
+//         names: v,
+//         preloadType,
+//       }));
+//     }),
+//   )(payloadInputsPairs);
+// }

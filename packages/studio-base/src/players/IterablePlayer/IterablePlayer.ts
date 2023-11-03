@@ -24,7 +24,6 @@ import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsColle
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
   AdvertiseOptions,
-  AttachmentNameSelection,
   MetadataNameSelection,
   Player,
   PlayerCapabilities,
@@ -143,7 +142,8 @@ export class IterablePlayer implements Player {
   #preloadTopics: TopicSelection = new Map();
 
   #attachmentSubscriptions: SubscribeAttachmentPayload[] = [];
-  #allAttachmentNames: TopicSelection = new Map();
+  #allAttachmentNames: AttachmentNameSelection = new Map();
+
   #allMetadataNames: MetadataNameSelection = new Map();
 
   #progress: Progress = {};
@@ -311,47 +311,47 @@ export class IterablePlayer implements Player {
     this.#setState("seek-backfill");
   }
 
-  // public setAttachmentSubscriptions(newSubscriptions: SubscribeAttachmentPayload[]): void {
-  //   log.info("set attachment subscriptions", newSubscriptions);
-  //   this.#attachmentSubscriptions = newSubscriptions;
-  //   // this.#metricsCollector.setSubscriptions(newSubscriptions);
+  public setAttachmentSubscriptions(newSubscriptions: SubscribeAttachmentPayload[]): void {
+    log.info("set attachment subscriptions", newSubscriptions);
+    this.#attachmentSubscriptions = newSubscriptions;
+    // this.#metricsCollector.setSubscriptions(newSubscriptions);
 
-  //   // const allAttachmentNames: AttachmentNameSelection = new Map(
-  //   //   this.#attachmentSubscriptions.map((subscription) => [subscription.name, subscription]),
-  //   // );
-  //   // const preloadTopics = new Map(
-  //   //   filterMap(this.#subscriptions, (sub) =>
-  //   //     sub.preloadType === "full" ? [sub.topic, sub] : undefined,
-  //   //   ),
-  //   // );
+    const allAttachmentNames: AttachmentNameSelection = new Map(
+      this.#attachmentSubscriptions.map((subscription) => [subscription.name, subscription]),
+    );
+    // const preloadTopics = new Map(
+    //   filterMap(this.#subscriptions, (sub) =>
+    //     sub.preloadType === "full" ? [sub.topic, sub] : undefined,
+    //   ),
+    // );
 
-  //   // If there are no changes to topics there's no reason to perform a "seek" to trigger loading
-  //   if (_.isEqual(allAttachmentNames, this.#allAttachmentNames)) {
-  //     return;
-  //   }
+    // If there are no changes to topics there's no reason to perform a "seek" to trigger loading
+    if (_.isEqual(allAttachmentNames, this.#allAttachmentNames)) {
+      return;
+    }
 
-  //   this.#allAttachmentNames = allAttachmentNames;
+    this.#allAttachmentNames = allAttachmentNames;
 
-  //   // If the player is playing, the playing state will detect any subscription changes and adjust
-  //   // iterators accordingly. However if we are idle or already seeking then we need to manually
-  //   // trigger the backfill.
-  //   if (
-  //     this.#state === "idle" ||
-  //     this.#state === "seek-backfill" ||
-  //     this.#state === "play" ||
-  //     this.#state === "start-play"
-  //   ) {
-  //     if (!this.#isPlaying && this.#currentTime) {
-  //       this.#seekTarget ??= this.#currentTime;
-  //       this.#untilTime = undefined;
-  //       this.#lastTickMillis = undefined;
-  //       this.#lastRangeMillis = undefined;
+    // If the player is playing, the playing state will detect any subscription changes and adjust
+    // iterators accordingly. However if we are idle or already seeking then we need to manually
+    // trigger the backfill.
+    if (
+      this.#state === "idle" ||
+      this.#state === "seek-backfill" ||
+      this.#state === "play" ||
+      this.#state === "start-play"
+    ) {
+      if (!this.#isPlaying && this.#currentTime) {
+        this.#seekTarget ??= this.#currentTime;
+        this.#untilTime = undefined;
+        this.#lastTickMillis = undefined;
+        this.#lastRangeMillis = undefined;
 
-  //       // Trigger a seek backfill to load any missing messages and reset the forward iterator
-  //       this.#setState("seek-backfill");
-  //     }
-  //   }
-  // }
+        // Trigger a seek backfill to load any missing messages and reset the forward iterator
+        this.#setState("seek-backfill");
+      }
+    }
+  }
 
   public setSubscriptions(newSubscriptions: SubscribePayload[]): void {
     log.info("set subscriptions", newSubscriptions);
@@ -639,6 +639,13 @@ export class IterablePlayer implements Player {
       start: next,
       consumptionType: "partial",
     });
+    log.info("all topics: ", this.#allTopics);
+
+    log.info("Initializing attachment iterator from", this.#start);
+    this.#attachments = await this.#iterableSource.getAttachments({
+      names: this.#allAttachmentNames,
+    });
+    log.info("all attachment names: ", this.#allAttachmentNames);
   }
 
   async #stateResetPlaybackIterator() {
@@ -682,12 +689,13 @@ export class IterablePlayer implements Player {
       start: this.#start,
       consumptionType: "partial",
     });
+    log.info("all topics: ", this.#allTopics);
 
     log.info("Initializing attachment iterator from", this.#start);
     this.#attachments = await this.#iterableSource.getAttachments({
       names: this.#allAttachmentNames,
-      time: this.#attachmentStartTime!,
     });
+    log.info("all attachment names: ", this.#allAttachmentNames);
 
     this.#metadata = await this.#iterableSource.getMetadata({
       names: this.#allMetadataNames,
@@ -773,16 +781,16 @@ export class IterablePlayer implements Player {
     const seekAckTimeout = setTimeout(() => {
       this.#presence = PlayerPresence.BUFFERING;
       this.#messages = [];
-      this.#attachments = [];
+      // this.#attachments = [];
       this.#currentTime = targetTime;
       this.#queueEmitState();
     }, 100);
 
     try {
-      const attachments = await this.#iterableSource.getAttachments({
-        names: this.#allAttachmentNames,
-        time: this.#attachmentStartTime!,
-      });
+      // const attachments = await this.#iterableSource.getAttachments({
+      //   names: this.#allAttachmentNames,
+      //   time: this.#attachmentStartTime!,
+      // });
 
       const metadata = await this.#iterableSource.getMetadata({
         names: this.#allMetadataNames,
@@ -802,7 +810,7 @@ export class IterablePlayer implements Player {
         return;
       }
 
-      this.#attachments = attachments;
+      // this.#attachments = attachments;
       this.#metadata = metadata;
       this.#messages = messages;
       this.#currentTime = targetTime;

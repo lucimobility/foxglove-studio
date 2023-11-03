@@ -9,6 +9,7 @@ import {
   AdvertiseOptions,
   PlayerState,
   PublishPayload,
+  SubscribeAttachmentPayload,
   SubscribePayload,
   Topic,
 } from "@foxglove/studio-base/players/types";
@@ -21,8 +22,13 @@ export type MessagePipelineContext = Immutable<{
   attachmentNames: string[];
   datatypes: RosDatatypes;
   subscriptions: SubscribePayload[];
+  attachmentSubscriptions: SubscribeAttachmentPayload[];
   messageEventsBySubscriberId: Map<string, MessageEvent[]>;
   setSubscriptions: (id: string, subscriptionsForId: Immutable<SubscribePayload[]>) => void;
+  setAttachmentSubscriptions: (
+    id: string,
+    subscriptionsForId: Immutable<SubscribeAttachmentPayload[]>,
+  ) => void;
   setPublishers: (id: string, publishersForId: AdvertiseOptions[]) => void;
   setParameter: (key: string, value: ParameterValue) => void;
   publish: (request: PublishPayload) => void;

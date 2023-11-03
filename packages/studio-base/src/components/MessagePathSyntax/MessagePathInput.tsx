@@ -215,7 +215,6 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
   const topicFields = useMemo(() => getFieldPaths(topics, datatypes), [datatypes, topics]);
 
   log.info("attachment names inside message path input file: ", attachmentNames);
-  // log.info("topic fields: ", topicFields.keys());
 
   const onChangeProp = props.onChange;
   const onChange = useCallback(
@@ -255,7 +254,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
       // add a "." so the user can keep typing to autocomplete the message path.
       const messageIsValidType = validTypes == undefined || validTypes.includes("message");
       const keepGoingAfterTopicName =
-        autocompleteType === "topicName" && !messageIsValidType && !isSimpleField;
+        autocompleteType === "topicName" && !(attachment ?? false) && !messageIsValidType && !isSimpleField;
       const value = keepGoingAfterTopicName ? rawValue + "." : rawValue;
 
       onChangeProp(completeStart + value + completeEnd, props.index);
@@ -273,7 +272,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
         autocomplete.blur();
       }
     },
-    [onChangeProp, path, props.index, topicFields, validTypes],
+    [onChangeProp, path, props.index, topicFields, validTypes, attachment],
   );
 
   const rosPath = useMemo(() => parseRosPath(path), [path]);
@@ -462,19 +461,21 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
       autocompleteFilterText: "",
       autocompleteRange: { start: 0, end: Infinity },
     };
-  }, [
-    disableAutocomplete,
+  }, [disableAutocomplete,
+    attachment,
     autocompleteType,
     topic,
     rosPath,
     invalidGlobalVariablesVariable,
-    path,
     attachmentNames,
+    path,
+    topicNamesAndFieldsAutocompleteItems,
+    topicNamesAutocompleteItems,
     structureTraversalResult,
     structures,
     validTypes,
     noMultiSlices,
-    globalVariables,
+    globalVariables
   ]);
 
   const topicsByName = useMemo(() => _.keyBy(topics, ({ name }) => name), [topics]);

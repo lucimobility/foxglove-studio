@@ -55,6 +55,7 @@ import {
   MessageEvent,
   PlayerProblem,
   MessageBlock,
+  SubscribeAttachmentPayload,
 } from "@foxglove/studio-base/players/types";
 import { reportError } from "@foxglove/studio-base/reportError";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
@@ -113,6 +114,9 @@ export default class UserScriptPlayer implements Player {
 
   #subscriptions: SubscribePayload[] = [];
   #scriptSubscriptions: Record<string, SubscribePayload> = {};
+
+  #attachmentSubscriptions: SubscribeAttachmentPayload[] = [];
+  #scriptAttachmentSubscriptions: Record<string, SubscribeAttachmentPayload> = {};
 
   // listener for state updates
   #listener?: (arg0: PlayerState) => Promise<void>;
@@ -1053,11 +1057,28 @@ export default class UserScriptPlayer implements Player {
       });
   }
 
+  public setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void {
+    this.#attachmentSubscriptions = subscriptions;
+    this.#protectedState
+      .runExclusive(async () => {
+        this.#setAttachmentSubscriptionsUnlocked(subscriptions);
+      })
+      .catch((err) => {
+        log.error(err);
+        reportError(err as Error);
+      });
+  }
+
   #setSubscriptionsUnlocked(subscriptions: SubscribePayload[], state: ProtectedState): void {
     this.#scriptSubscriptions = getPreloadTypes(subscriptions);
     this.#player.setSubscriptions(
       remapVirtualSubscriptions(subscriptions, state.inputsByOutputTopic),
     );
+  }
+
+  #setAttachmentSubscriptionsUnlocked(subscriptions: SubscribeAttachmentPayload[]): void {
+    // this.#scriptAttachmentSubscriptions = getPreloadTypes(subscriptions);
+    this.#player.setAttachmentSubscriptions(subscriptions);
   }
 
   public close = (): void => {

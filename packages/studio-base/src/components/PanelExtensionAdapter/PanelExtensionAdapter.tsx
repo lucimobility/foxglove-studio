@@ -42,6 +42,7 @@ import useGlobalVariables from "@foxglove/studio-base/hooks/useGlobalVariables";
 import {
   AdvertiseOptions,
   PlayerCapabilities,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import {
@@ -74,8 +75,8 @@ function isVersionedPanelConfig(config: unknown): config is VersionedPanelConfig
 type PanelExtensionAdapterProps = {
   /** function that initializes the panel extension */
   initPanel:
-    | ExtensionPanelRegistration["initPanel"]
-    | ((context: BuiltinPanelExtensionContext) => void);
+  | ExtensionPanelRegistration["initPanel"]
+  | ((context: BuiltinPanelExtensionContext) => void);
   /**
    * If defined, the highest supported version of config the panel supports.
    * Used to prevent older implementations of a panel from trying to access
@@ -115,7 +116,7 @@ function PanelExtensionAdapter(
 
   const messagePipelineContext = useMessagePipeline(selectContext);
 
-  const { playerState, pauseFrame, setSubscriptions, seekPlayback, sortedTopics } =
+  const { playerState, pauseFrame, setSubscriptions, seekPlayback, sortedTopics, setAttachmentSubscriptions } =
     messagePipelineContext;
 
   const { capabilities, profile: dataSourceProfile } = playerState;
@@ -323,12 +324,12 @@ function PanelExtensionAdapter(
 
       seekPlayback: seekPlayback
         ? (stamp: number | Time) => {
-            if (!isMounted()) {
-              return;
-            }
-            const seekTarget = typeof stamp === "object" ? stamp : fromSec(stamp);
-            seekPlayback(seekTarget);
+          if (!isMounted()) {
+            return;
           }
+          const seekTarget = typeof stamp === "object" ? stamp : fromSec(stamp);
+          seekPlayback(seekTarget);
+        }
         : undefined,
 
       dataSourceProfile,
@@ -419,57 +420,87 @@ function PanelExtensionAdapter(
         setSubscriptions(panelId, subscribePayloads);
       },
 
+      subscribeAttachment: (names: ReadonlyArray<string | Subscription>) => {
+        if (!isMounted()) {
+          return;
+        }
+        const subscribeAttachmentPayloads = names.map((item): SubscribeAttachmentPayload => {
+          if (typeof item === "string") {
+            // For backwards compatability with the topic-string-array api `subscribe(["/topic"])`
+            // results in a topic subscription with full preloading
+            return { name: item, preloadType: "full" };
+          }
+
+          return {
+            name: item.topic,
+            preloadType: item.preload === true ? "full" : "partial",
+          };
+        });
+
+        // ExtensionPanel-Facing subscription type
+        const localSubs = names.map((item): Subscription => {
+          if (typeof item === "string") {
+            return { topic: item, preload: true };
+          }
+
+          return item;
+        });
+
+        setLocalSubscriptions(localSubs);
+        setAttachmentSubscriptions(panelId, subscribeAttachmentPayloads);
+      },
+
       advertise: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic: string, datatype: string, options) => {
-            if (!isMounted()) {
-              return;
-            }
-            const payload: AdvertiseOptions = {
-              topic,
-              schemaName: datatype,
-              options,
-            };
-            advertisementsRef.current.set(topic, payload);
-
-            getMessagePipelineContext().setPublishers(
-              panelId,
-              Array.from(advertisementsRef.current.values()),
-            );
+          if (!isMounted()) {
+            return;
           }
+          const payload: AdvertiseOptions = {
+            topic,
+            schemaName: datatype,
+            options,
+          };
+          advertisementsRef.current.set(topic, payload);
+
+          getMessagePipelineContext().setPublishers(
+            panelId,
+            Array.from(advertisementsRef.current.values()),
+          );
+        }
         : undefined,
 
       unadvertise: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic: string) => {
-            if (!isMounted()) {
-              return;
-            }
-            advertisementsRef.current.delete(topic);
-            getMessagePipelineContext().setPublishers(
-              panelId,
-              Array.from(advertisementsRef.current.values()),
-            );
+          if (!isMounted()) {
+            return;
           }
+          advertisementsRef.current.delete(topic);
+          getMessagePipelineContext().setPublishers(
+            panelId,
+            Array.from(advertisementsRef.current.values()),
+          );
+        }
         : undefined,
 
       publish: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic, message) => {
-            if (!isMounted()) {
-              return;
-            }
-            getMessagePipelineContext().publish({
-              topic,
-              msg: message as Record<string, unknown>,
-            });
+          if (!isMounted()) {
+            return;
           }
+          getMessagePipelineContext().publish({
+            topic,
+            msg: message as Record<string, unknown>,
+          });
+        }
         : undefined,
 
       callService: capabilities.includes(PlayerCapabilities.callServices)
         ? async (service, request): Promise<unknown> => {
-            if (!isMounted()) {
-              throw new Error("Service call after panel was unmounted");
-            }
-            return await getMessagePipelineContext().callService(service, request);
+          if (!isMounted()) {
+            throw new Error("Service call after panel was unmounted");
           }
+          return await getMessagePipelineContext().callService(service, request);
+        }
         : undefined,
 
       unstable_fetchAsset: async (uri, options) => {
@@ -528,6 +559,7 @@ function PanelExtensionAdapter(
     setHoverValue,
     setSharedPanelState,
     setSubscriptions,
+    setAttachmentSubscriptions,
     updatePanelSettingsTree,
     setMessagePathDropConfig,
   ]);
@@ -594,6 +626,7 @@ function PanelExtensionAdapter(
       isPanelInitializedRef.current = false;
       panelElement.remove();
       getMessagePipelineContext().setSubscriptions(panelId, []);
+      getMessagePipelineContext().setAttachmentSubscriptions(panelId, []);
       getMessagePipelineContext().setPublishers(panelId, []);
     };
   }, [initPanel, panelId, partialExtensionContext, getMessagePipelineContext, configTooNew]);

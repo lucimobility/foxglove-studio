@@ -54,6 +54,7 @@ export interface Player {
   // Set a new set of subscriptions/advertisers. This might trigger fetching
   // new data, which might in turn trigger a backfill of messages.
   setSubscriptions(subscriptions: Immutable<SubscribePayload[]>): void;
+  setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void;
   setPublishers(publishers: AdvertiseOptions[]): void;
   // Modify a remote parameter such as a rosparam.
   setParameter(key: string, value: ParameterValue): void;
@@ -298,6 +299,7 @@ export type SubscribePayload = {
    * The name of the topic to subscribe to.
    */
   topic: string;
+  attachment?: boolean;
   /**
    * If defined the source will return only these fields from messages.
    * Otherwise entire messages will be returned.
@@ -378,6 +380,7 @@ export interface PlayerMetricsCollectorInterface {
   pause(): void;
   close(): void;
   setSubscriptions(subscriptions: SubscribePayload[]): void;
+  setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void;
   recordBytesReceived(bytes: number): void;
   recordPlaybackTime(time: Time, params: { stillLoadingData: boolean }): void;
   recordUncachedRangeRequest(): void;

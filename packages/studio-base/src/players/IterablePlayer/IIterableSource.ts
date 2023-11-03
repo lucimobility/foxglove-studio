@@ -5,7 +5,6 @@
 import { Time } from "@foxglove/rostime";
 import { Attachment, Immutable, MessageEvent, Metadata } from "@foxglove/studio";
 import {
-  AttachmentNameSelection,
   MetadataNameSelection,
   PlayerProblem,
   Topic,
@@ -102,7 +101,6 @@ export type GetBackfillMessagesArgs = {
 
 export type GetAttachmentArgs = {
   names: TopicSelection;
-  time: Time;
 };
 
 export type GetMetadataArgs = {

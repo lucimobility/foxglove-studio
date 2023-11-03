@@ -68,9 +68,9 @@ const mockAppConfiguration: IAppConfiguration = {
       return undefined;
     }
   },
-  set: async () => {},
-  addChangeListener: () => {},
-  removeChangeListener: () => {},
+  set: async () => { },
+  addChangeListener: () => { },
+  removeChangeListener: () => { },
 };
 
 function Wrapper({
