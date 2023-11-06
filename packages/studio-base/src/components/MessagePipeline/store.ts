@@ -8,6 +8,7 @@ import shallowequal from "shallowequal";
 import { createStore, StoreApi } from "zustand";
 
 import { Condvar } from "@foxglove/den/async";
+import Log from "@foxglove/log";
 import { Immutable, MessageEvent } from "@foxglove/studio";
 import {
   makeAttachmentSubscriptionMemoizer,
@@ -40,6 +41,7 @@ export function defaultPlayerState(): PlayerState {
     activeData: undefined,
   };
 }
+const log = Log.getLogger(__filename);
 
 export type MessagePipelineInternalState = {
   dispatch: (action: MessagePipelineStateAction) => void;
@@ -71,6 +73,7 @@ export type MessagePipelineInternalState = {
    */
   subscriberIdsByTopic: Map<string, string[]>;
   newTopicsBySubscriberId: Map<string, Set<string>>;
+  newAttachmentsBySubscriberId: Map<string, Set<string>>;
   lastMessageEventByTopic: Map<string, MessageEvent>;
   /** Function to call when react render has completed with the latest state */
   renderDone?: () => void;
@@ -118,6 +121,7 @@ export function createMessagePipelineStore({
     attachmentSubscriptionsById: new Map(),
     subscriberIdsByTopic: new Map(),
     newTopicsBySubscriberId: new Map(),
+    newAttachmentsBySubscriberId: new Map(),
     lastMessageEventByTopic: new Map(),
     lastCapabilities: [],
 
@@ -163,9 +167,11 @@ export function createMessagePipelineStore({
       attachmentNames: [],
       datatypes: new Map(),
       setSubscriptions(id, payloads) {
+        log.info("update-subscriber", payloads);
         get().dispatch({ type: "update-subscriber", id, payloads });
       },
       setAttachmentSubscriptions(id, payloads) {
+        log.info("update-attachment-subscriber", payloads);
         get().dispatch({ type: "update-attachment-subscriber", id, payloads });
       },
       setPublishers(id, payloads) {
@@ -238,6 +244,8 @@ function updateSubscriberAction(
   const previousSubscriptionsById = prevState.subscriptionsById;
   const newTopicsBySubscriberId = new Map(prevState.newTopicsBySubscriberId);
 
+  log.info(action);
+
   // Record any _new_ topics for this subscriber into newTopicsBySubscriberId
   const newTopics = newTopicsBySubscriberId.get(action.id);
   if (!newTopics) {
@@ -300,7 +308,9 @@ function updateAttachmentSubscriberAction(
   action: UpdateAttachmentSubscriberAction,
 ): MessagePipelineInternalState {
   const previousSubscriptionsById = prevState.attachmentSubscriptionsById;
-  const newTopicsBySubscriberId = new Map(prevState.newTopicsBySubscriberId);
+  const newTopicsBySubscriberId = new Map(prevState.newAttachmentsBySubscriberId);
+
+  log.info(action);
 
   // Record any _new_ topics for this subscriber into newTopicsBySubscriberId
   const newTopics = newTopicsBySubscriberId.get(action.id);

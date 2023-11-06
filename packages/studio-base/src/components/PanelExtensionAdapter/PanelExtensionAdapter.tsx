@@ -435,6 +435,8 @@ function PanelExtensionAdapter(
           };
         });
 
+        log.info(subscribeAttachmentPayloads);
+
         // ExtensionPanel-Facing subscription type
         const localSubs = names.map((item): string => {
 

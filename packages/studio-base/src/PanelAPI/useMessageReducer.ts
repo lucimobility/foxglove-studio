@@ -36,7 +36,7 @@ type MessagesReducer<T> = (arg0: T, messages: readonly MessageEvent[]) => T;
 
 type Params<T> = {
   topics: readonly string[] | SubscribePayload[];
-  attachments?: readonly SubscribeAttachmentPayload[];
+  attachments: readonly string[] | SubscribeAttachmentPayload[];
   preloadType?: SubscriptionPreloadType;
 
   // Functions called when the reducers change and for each newly received message.
@@ -101,23 +101,17 @@ export function useMessageReducer<T>(props: Params<T>): T {
     });
   }, [preloadType, requestedTopics]);
 
-  const attachmentSubscriptions: SubscribeAttachmentPayload[] | undefined = useMemo<
-    SubscribeAttachmentPayload[] | undefined
-  >(() => {
-    if (requestedAttachments) {
-      return requestedAttachments.map((name) => {
-        if (typeof name === "string") {
-          return { name, preloadType };
-        } else {
-          return name;
-        }
-      });
-    }
-    return undefined;
-  }, [preloadType, requestedAttachments]);
+  const attachmentSubscriptions = useMemo<SubscribeAttachmentPayload[]>(() => {
+    return requestedAttachments.map((name) => {
+      if (typeof name === "string") {
+        return { name };
+      } else {
+        return name;
+      }
+    });
+  }, [requestedAttachments]);
 
   const setSubscriptions = useMessagePipeline(selectSetSubscriptions);
-  const setAttachmentSubscriptions = useMessagePipeline(selectSetAttachmentSubscriptions);
   useEffect(() => {
     setSubscriptions(id, subscriptions);
   }, [id, setSubscriptions, subscriptions]);
@@ -127,9 +121,11 @@ export function useMessageReducer<T>(props: Params<T>): T {
     };
   }, [id, setSubscriptions]);
 
+  const setAttachmentSubscriptions = useMessagePipeline(selectSetAttachmentSubscriptions);
   useEffect(() => {
-    setAttachmentSubscriptions(id, attachmentSubscriptions!);
-  }, [id, setAttachmentSubscriptions, attachmentSubscriptions]);
+    log.info(attachmentSubscriptions);
+    setAttachmentSubscriptions(id, attachmentSubscriptions);
+  }, [attachmentSubscriptions, id, setAttachmentSubscriptions]);
   useEffect(() => {
     return () => {
       setAttachmentSubscriptions(id, []);
