@@ -283,6 +283,70 @@ function updateSubscriberAction(
     },
   };
 }
+// Update state with a subscriber. Any new topics for the subscriber are tracked in newTopicsBySubscriberId
+// to receive the last message on their newly subscribed topics.
+function updateAttachmentSubscriberAction(
+  prevState: MessagePipelineInternalState,
+  action: UpdateAttachmentSubscriberAction,
+): MessagePipelineInternalState {
+  const previousSubscriptionsById = prevState.subscriptionsById;
+  const newTopicsBySubscriberId = new Map(prevState.newTopicsBySubscriberId);
+
+  // Record any _new_ topics for this subscriber into newTopicsBySubscriberId
+  const newTopics = newTopicsBySubscriberId.get(action.id);
+  if (!newTopics) {
+    const actionTopics = action.payloads.map((sub) => sub.topic);
+    newTopicsBySubscriberId.set(action.id, new Set(actionTopics));
+  } else {
+    const previousSubscription = previousSubscriptionsById.get(action.id);
+    const prevTopics = new Set(previousSubscription?.map((sub) => sub.topic) ?? []);
+    for (const { topic: newTopic } of action.payloads) {
+      if (!prevTopics.has(newTopic)) {
+        newTopics.add(newTopic);
+      }
+    }
+  }
+
+  const newSubscriptionsById = new Map(previousSubscriptionsById);
+
+  if (action.payloads.length === 0) {
+    // When a subscription id has no topics we removed it from our map
+    newSubscriptionsById.delete(action.id);
+  } else {
+    newSubscriptionsById.set(action.id, action.payloads);
+  }
+
+  const subscriberIdsByTopic = new Map<string, string[]>();
+
+  // make a map of topics to subscriber ids
+  for (const [id, subs] of newSubscriptionsById) {
+    for (const subscription of subs) {
+      const topic = subscription.topic;
+
+      const ids = subscriberIdsByTopic.get(topic) ?? [];
+      // If the id is already present in the array for the topic then we should not add it again.
+      // If we add it again it will be given frame messages again when bucketing incoming messages
+      // by subscriber id.
+      if (!ids.includes(id)) {
+        ids.push(id);
+      }
+      subscriberIdsByTopic.set(topic, ids);
+    }
+  }
+
+  const subscriptions = mergeSubscriptions(Array.from(newSubscriptionsById.values()).flat());
+
+  return {
+    ...prevState,
+    subscriptionsById: newSubscriptionsById,
+    subscriberIdsByTopic,
+    newTopicsBySubscriberId,
+    public: {
+      ...prevState.public,
+      subscriptions,
+    },
+  };
+}
 // Update with a player state.
 // Put messages from the player state into messagesBySubscriberId. Any new topic subscribers, receive
 // the last message on a topic.
@@ -417,6 +481,8 @@ export function reducer(
       return updatePlayerStateAction(prevState, action);
     case "update-subscriber":
       return updateSubscriberAction(prevState, action);
+    case "update-attachment-subscriber":
+      return updateAttachmentSubscriberAction(prevState, action);
 
     case "set-publishers": {
       const newPublishersById = { ...prevState.publishersById, [action.id]: action.payloads };

@@ -12,6 +12,7 @@
 //   You may not use this file except in compliance with the License.
 
 import { Mutex } from "async-mutex";
+import { Immutable } from "immer";
 import * as _ from "lodash-es";
 import memoizeWeak from "memoize-weak";
 import ReactDOM from "react-dom";
@@ -1077,8 +1078,9 @@ export default class UserScriptPlayer implements Player {
   }
 
   #setAttachmentSubscriptionsUnlocked(subscriptions: SubscribeAttachmentPayload[]): void {
+    const immutableSubscriptions: Immutable<SubscribeAttachmentPayload[]> = subscriptions;
     // this.#scriptAttachmentSubscriptions = getPreloadTypes(subscriptions);
-    this.#player.setAttachmentSubscriptions(subscriptions);
+    this.#player.setAttachmentSubscriptions(immutableSubscriptions);
   }
 
   public close = (): void => {

@@ -54,7 +54,7 @@ export interface Player {
   // Set a new set of subscriptions/advertisers. This might trigger fetching
   // new data, which might in turn trigger a backfill of messages.
   setSubscriptions(subscriptions: Immutable<SubscribePayload[]>): void;
-  setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void;
+  setAttachmentSubscriptions(subscriptions: Immutable<SubscribeAttachmentPayload[]>): void;
   setPublishers(publishers: AdvertiseOptions[]): void;
   // Modify a remote parameter such as a rosparam.
   setParameter(key: string, value: ParameterValue): void;
