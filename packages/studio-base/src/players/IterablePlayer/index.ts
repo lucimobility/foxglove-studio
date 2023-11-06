@@ -4,3 +4,5 @@
 
 export * from "./IterablePlayer";
 export * from "./WorkerIterableSource";
+export * from "./WorkerSourceWriter";
+export * from "./WorkerSourceWriterWorker";

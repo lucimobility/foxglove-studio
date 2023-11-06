@@ -10,7 +10,9 @@ import { createStore, StoreApi } from "zustand";
 import { Condvar } from "@foxglove/den/async";
 import { Immutable, MessageEvent } from "@foxglove/studio";
 import {
+  makeAttachmentSubscriptionMemoizer,
   makeSubscriptionMemoizer,
+  mergeAttachmentSubscriptions,
   mergeSubscriptions,
 } from "@foxglove/studio-base/components/MessagePipeline/subscriptions";
 import {
@@ -52,6 +54,11 @@ export type MessagePipelineInternalState = {
   /** Preserves reference equality of subscriptions to minimize player subscription churn. */
   subscriptionMemoizer: (sub: SubscribePayload) => SubscribePayload;
   subscriptionsById: Map<string, Immutable<SubscribePayload[]>>;
+
+  /** Preserves reference equality of subscriptions to minimize player subscription churn. */
+  attachmentSubscriptionMemoizer: (sub: SubscribeAttachmentPayload) => SubscribeAttachmentPayload;
+  attachmentSubscriptionsById: Map<string, Immutable<SubscribeAttachmentPayload[]>>;
+
   publishersById: { [key: string]: AdvertiseOptions[] };
   allPublishers: AdvertiseOptions[];
   /**
@@ -107,6 +114,8 @@ export function createMessagePipelineStore({
     allPublishers: [],
     subscriptionMemoizer: makeSubscriptionMemoizer(),
     subscriptionsById: new Map(),
+    attachmentSubscriptionMemoizer: makeAttachmentSubscriptionMemoizer(),
+    attachmentSubscriptionsById: new Map(),
     subscriberIdsByTopic: new Map(),
     newTopicsBySubscriberId: new Map(),
     lastMessageEventByTopic: new Map(),
@@ -132,6 +141,7 @@ export function createMessagePipelineStore({
           playerState: defaultPlayerState(),
           messageEventsBySubscriberId: new Map(),
           subscriptions: [],
+          attachmentSubscriptions: [],
           sortedTopics: [],
           attachmentNames: [],
           datatypes: new Map(),
@@ -148,6 +158,7 @@ export function createMessagePipelineStore({
       playerState: defaultPlayerState(),
       messageEventsBySubscriberId: new Map(),
       subscriptions: [],
+      attachmentSubscriptions: [],
       sortedTopics: [],
       attachmentNames: [],
       datatypes: new Map(),
@@ -215,7 +226,6 @@ export function createMessagePipelineStore({
           condvar.notifyAll();
         };
       },
-      attachmentSubscriptions: [],
     },
   }));
 }
@@ -289,20 +299,20 @@ function updateAttachmentSubscriberAction(
   prevState: MessagePipelineInternalState,
   action: UpdateAttachmentSubscriberAction,
 ): MessagePipelineInternalState {
-  const previousSubscriptionsById = prevState.subscriptionsById;
+  const previousSubscriptionsById = prevState.attachmentSubscriptionsById;
   const newTopicsBySubscriberId = new Map(prevState.newTopicsBySubscriberId);
 
   // Record any _new_ topics for this subscriber into newTopicsBySubscriberId
   const newTopics = newTopicsBySubscriberId.get(action.id);
   if (!newTopics) {
-    const actionTopics = action.payloads.map((sub) => sub.topic);
+    const actionTopics = action.payloads.map((sub) => sub.name);
     newTopicsBySubscriberId.set(action.id, new Set(actionTopics));
   } else {
     const previousSubscription = previousSubscriptionsById.get(action.id);
-    const prevTopics = new Set(previousSubscription?.map((sub) => sub.topic) ?? []);
-    for (const { topic: newTopic } of action.payloads) {
-      if (!prevTopics.has(newTopic)) {
-        newTopics.add(newTopic);
+    const prevTopics = new Set(previousSubscription?.map((sub) => sub.name) ?? []);
+    for (const { name: newName } of action.payloads) {
+      if (!prevTopics.has(newName)) {
+        newTopics.add(newName);
       }
     }
   }
@@ -321,29 +331,31 @@ function updateAttachmentSubscriberAction(
   // make a map of topics to subscriber ids
   for (const [id, subs] of newSubscriptionsById) {
     for (const subscription of subs) {
-      const topic = subscription.topic;
+      const name = subscription.name;
 
-      const ids = subscriberIdsByTopic.get(topic) ?? [];
+      const ids = subscriberIdsByTopic.get(name) ?? [];
       // If the id is already present in the array for the topic then we should not add it again.
       // If we add it again it will be given frame messages again when bucketing incoming messages
       // by subscriber id.
       if (!ids.includes(id)) {
         ids.push(id);
       }
-      subscriberIdsByTopic.set(topic, ids);
+      subscriberIdsByTopic.set(name, ids);
     }
   }
 
-  const subscriptions = mergeSubscriptions(Array.from(newSubscriptionsById.values()).flat());
+  const subscriptions = mergeAttachmentSubscriptions(
+    Array.from(newSubscriptionsById.values()).flat(),
+  );
 
   return {
     ...prevState,
-    subscriptionsById: newSubscriptionsById,
+    attachmentSubscriptionsById: newSubscriptionsById,
     subscriberIdsByTopic,
     newTopicsBySubscriberId,
     public: {
       ...prevState.public,
-      subscriptions,
+      attachmentSubscriptions: subscriptions,
     },
   };
 }

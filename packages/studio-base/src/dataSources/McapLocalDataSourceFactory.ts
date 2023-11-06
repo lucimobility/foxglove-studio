@@ -8,6 +8,7 @@ import {
   DataSourceFactoryInitializeArgs,
 } from "@foxglove/studio-base/context/PlayerSelectionContext";
 import { IterablePlayer, WorkerIterableSource } from "@foxglove/studio-base/players/IterablePlayer";
+import { WorkerSourceWriter } from "@foxglove/studio-base/players/IterablePlayer/WorkerSourceWriter";
 import { Player } from "@foxglove/studio-base/players/types";
 
 const log = Logger.getLogger(__filename);
@@ -27,7 +28,7 @@ class McapLocalDataSourceFactory implements IDataSourceFactory {
 
     const source = new WorkerIterableSource({
       initWorker: () => {
-        log.info("Initializing Mcap local data source factory", file);
+        log.warn("Initializing Mcap local data source factory", file);
         return new Worker(
           // foxglove-depcheck-used: babel-plugin-transform-import-meta
           new URL(
@@ -39,9 +40,26 @@ class McapLocalDataSourceFactory implements IDataSourceFactory {
       initArgs: { file },
     });
 
+    log.warn("Here--------------------------", file);
+
+    const writer = new WorkerSourceWriter({
+      initWorker: () => {
+        log.warn("Initializing Mcap local data source writer factory", file);
+        return new Worker(
+          // foxglove-depcheck-used: babel-plugin-transform-import-meta
+          new URL(
+            "@foxglove/studio-base/players/IterablePlayer/Mcap/McapSourceWriterWorker.worker",
+            import.meta.url,
+          ),
+        );
+      },
+      initArgs: { file },
+    });
+
     return new IterablePlayer({
       metricsCollector: args.metricsCollector,
       source,
+      writer,
       name: file.name,
       sourceId: this.id,
     });

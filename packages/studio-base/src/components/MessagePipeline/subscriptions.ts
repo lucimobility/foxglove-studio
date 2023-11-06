@@ -6,7 +6,7 @@ import moize from "moize";
 import * as R from "ramda";
 
 import { Immutable } from "@foxglove/studio";
-import { SubscribePayload } from "@foxglove/studio-base/players/types";
+import { SubscribeAttachmentPayload, SubscribePayload } from "@foxglove/studio-base/players/types";
 
 /**
  * Create a deep equal memoized identify function. Used for stabilizing the subscription payloads we
@@ -16,6 +16,12 @@ import { SubscribePayload } from "@foxglove/studio-base/players/types";
  */
 export function makeSubscriptionMemoizer(): (val: SubscribePayload) => SubscribePayload {
   return moize((val: SubscribePayload) => val, { isDeepEqual: true, maxSize: Infinity });
+}
+
+export function makeAttachmentSubscriptionMemoizer(): (
+  val: SubscribeAttachmentPayload,
+) => SubscribeAttachmentPayload {
+  return moize((val: SubscribeAttachmentPayload) => val, { isDeepEqual: true, maxSize: Infinity });
 }
 
 /**
@@ -98,5 +104,17 @@ export function mergeSubscriptions(
     }),
     R.partition((v: Immutable<SubscribePayload>) => v.preloadType === "full"),
     ([full, partial]) => [...denormalizeSubscriptions(full), ...denormalizeSubscriptions(partial)],
+  )(subscriptions);
+}
+
+export function mergeAttachmentSubscriptions(
+  subscriptions: Immutable<SubscribeAttachmentPayload[]>,
+): Immutable<SubscribeAttachmentPayload[]> {
+  return R.pipe(
+    R.chain((v: Immutable<SubscribeAttachmentPayload>): Immutable<SubscribeAttachmentPayload>[] => {
+      // a "full" subscription to all fields implies a "partial" subscription
+      // to those fields, too
+      return [v, { ...v }];
+    }),
   )(subscriptions);
 }

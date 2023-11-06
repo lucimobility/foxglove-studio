@@ -12,6 +12,7 @@ import {
   Player,
   PlayerState,
   PublishPayload,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 
@@ -54,6 +55,8 @@ export class TopicAliasingPlayer implements Player {
   // variable updates which can happen at a different time to new state from the wrapped player. The
   // mutex prevents invoking the listener concurrently.
   #listener?: MutexLocked<(state: PlayerState) => Promise<void>>;
+  #listener?: (state: PlayerState) => Promise<void>;
+  #attachmentSubscriptions: SubscribeAttachmentPayload[] = [];
 
   public constructor(
     player: Player,
@@ -103,6 +106,27 @@ export class TopicAliasingPlayer implements Player {
       this.#pendingSubscriptions = undefined;
     } else {
       this.#pendingSubscriptions = subscriptions;
+    }
+  }
+
+  public setAttachmentSubscriptions(newSubscriptions: SubscribeAttachmentPayload[]): void {
+    // log.info("set attachment subscriptions", newSubscriptions);
+    this.#attachmentSubscriptions = newSubscriptions;
+    // this.#metricsCollector.setSubscriptions(newSubscriptions);
+
+    if (this.#skipAliasing) {
+      this.#player.setAttachmentSubscriptions(newSubscriptions);
+    } else {
+      // If we have aliases but haven't recieved a topic list from an active state from
+      // the wrapped player yet we have to delay setSubscriptions until we have the topic
+      // list to set up the aliases.
+      if (this.#inputs.topics != undefined) {
+        const aliasedSubscriptions = aliasAttachmentSubscriptions(this.#inputs, newSubscriptions);
+        this.#player.setAttachmentSubscriptions(aliasedSubscriptions);
+        this.#pendingSubscriptions = undefined;
+      } else {
+        this.#attachmentSubscriptions = newSubscriptions;
+      }
     }
   }
 
@@ -205,6 +229,13 @@ export class TopicAliasingPlayer implements Player {
         this.#inputs = { ...this.#inputs, topics: playerState.activeData?.topics };
         this.#stateProcessor = this.#stateProcessorFactory.buildStateProcessor(this.#inputs);
       }
+      const newState = aliasPlayerState(
+        this.#inputs,
+        this.#subscriptions,
+        this.#attachmentSubscriptions,
+        playerState,
+      );
+      await this.#listener?.(newState);
 
       // remember the last player state so we can re-use it when global variables are set
       this.#lastPlayerState = playerState;

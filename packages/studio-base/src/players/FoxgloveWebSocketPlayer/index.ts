@@ -114,7 +114,9 @@ export default class FoxgloveWebSocketPlayer implements Player {
   #profile?: string;
   #urlState: PlayerState["urlState"];
 
-  #parsedAttachments: Attachment[] = [];
+  #attachments: Attachment[] = [];
+
+  #allAttachmentNames: string[] = [];
 
   /** Earliest time seen */
   #startTime?: Time;
@@ -172,6 +174,14 @@ export default class FoxgloveWebSocketPlayer implements Player {
       parameters: { url: this.#url },
     };
     this.#open();
+  }
+  public setAttachmentSubscriptions(
+    _subscriptions: readonly {
+      readonly name: string;
+      readonly fields?: readonly string[] | undefined;
+    }[],
+  ): void {
+    throw new Error("Method not implemented.");
   }
 
   #open = (): void => {
@@ -861,8 +871,6 @@ export default class FoxgloveWebSocketPlayer implements Player {
     this.#parsedMessages = [];
     this.#parsedMessagesBytes = 0;
 
-    const attachments = this.#parsedAttachments;
-    this.#parsedAttachments = [];
     return this.#listener({
       name: this.#name,
       presence: this.#presence,
@@ -875,7 +883,8 @@ export default class FoxgloveWebSocketPlayer implements Player {
 
       activeData: {
         messages,
-        attachments,
+        attachments: this.#attachments,
+        attachmentNames: this.#allAttachmentNames,
         totalBytesReceived: this.#receivedBytes,
         startTime: this.#startTime,
         endTime: this.#endTime,

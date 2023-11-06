@@ -3,10 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Time } from "@foxglove/rostime";
-import { Attachment, Immutable, MessageEvent, Metadata } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata } from "@foxglove/studio";
 import {
-  AttachmentNameSelection,
-  MetadataNameSelection,
   PlayerProblem,
   Topic,
   TopicSelection,
@@ -77,15 +75,12 @@ export type MessageIteratorArgs = {
 export type IteratorResult =
   | {
       type: "message-event";
+      connectionId?: number;
       msgEvent: MessageEvent;
     }
   | {
       type: "problem";
-      /**
-       * An ID representing the channel/connection where this problem came from. The app may choose
-       * to display only a single problem from each connection to avoid overwhelming the user.
-       */
-      connectionId: number;
+      connectionId?: number;
       problem: PlayerProblem;
     }
   | {
@@ -93,71 +88,12 @@ export type IteratorResult =
       stamp: Time;
     };
 
-export type GetBackfillMessagesArgs = {
-  topics: TopicSelection;
-  time: Time;
-
-  abortSignal?: AbortSignal;
-};
-
-export type GetAttachmentArgs = {
-  names: AttachmentNameSelection;
-};
-
-export type GetMetadataArgs = {
-  names: MetadataNameSelection;
-};
-
-// IMessageCursor describes an interface for message cursors. Message cursors are a similar concept
-// to javascript generators but provide a method for reading a batch of messages rather than one
-// message.
-//
-// Motivation: When using webworkers, read calls are invoked via an RPC interface. For large
-// datasets (many hundred thousand) messages, preloading the data (i.e. to plot a signal) would
-// result in several hundred thousand RPC calls. The overhead of making these calls add up and
-// negatively impact the preloading experience.
-//
-// Providing an interface which allows callers to read a batch of messages significantly (4x speedup
-// on an 700k message dataset on M1 Pro) reduces the RPC call overhead.
-export interface IMessageCursor {
-  /**
-   * Read the next message from the cursor. Return a result or undefined if the cursor is done
-   */
-  next(): Promise<IteratorResult | undefined>;
-
-  /**
-   * Read the next batch of messages from the cursor. Return an array of results or undefined if the cursor is done.
-   *
-   * @param durationMs indicate the duration (in milliseconds) for the batch to stop waiting for
-   * more messages and return. This duration tracks the receive time from the first message in the
-   * batch.
-   */
-  nextBatch(durationMs: number): Promise<IteratorResult[] | undefined>;
-
-  /**
-   * Read a batch of messages through end time (inclusive) or end of cursor
-   *
-   * return undefined when no more message remain in the cursor
-   */
-  readUntil(end: Time): Promise<IteratorResult[] | undefined>;
-
-  /**
-   * End the cursor
-   *
-   * Release any held resources by the cursor.
-   *
-   * Calls to next() and readUntil() should return `undefined` after a cursor is ended as if the
-   * cursor reached the end of its messages.
-   */
-  end(): Promise<void>;
-}
-
 /**
  * IIterableSource specifies an interface for initializing and accessing messages using iterators.
  *
  * IIterableSources also provide a backfill method to obtain the last message available for topics.
  */
-export interface IIterableSource {
+export interface SourceWriter {
   /**
    * Initialize the source.
    */
@@ -177,30 +113,13 @@ export interface IIterableSource {
    * generator function, and a `finally` block to do any necessary cleanup tasks when the request
    * finishes or is canceled.
    */
-  messageIterator(
-    args: Immutable<MessageIteratorArgs>,
-  ): AsyncIterableIterator<Readonly<IteratorResult>>;
+  // messageIterator(
+  //   args: Immutable<MessageIteratorArgs>,
+  // ): AsyncIterableIterator<Readonly<IteratorResult>>;
 
-  getAttachments(args: Immutable<GetAttachmentArgs>): Promise<Attachment[]>;
+  writeAttachments(attachments: Attachment[]): void;
 
-  getMetadata(args: Immutable<GetMetadataArgs>): Promise<Metadata[]>;
-
-  /**
-   * Load the most recent messages per topic that occurred before or at the target time, if
-   * available.
-   */
-  getBackfillMessages(args: Immutable<GetBackfillMessagesArgs>): Promise<MessageEvent[]>;
-
-  /**
-   * A source can optionally implement a cursor interface in addition to a messageIterator interface.
-   *
-   * A cursor interface provides methods to read messages in batches rather than one at a time.
-   * This improves performance for some workflows (i.e. message reading over webworkers) by avoiding
-   * individual "next" calls per message.
-   */
-  getMessageCursor?: (
-    args: Immutable<MessageIteratorArgs> & { abort?: AbortSignal },
-  ) => IMessageCursor;
+  writeMetadata(metadata: Metadata[]): void;
 
   /**
    * Optional method a data source can implement to cleanup resources. The player will call this

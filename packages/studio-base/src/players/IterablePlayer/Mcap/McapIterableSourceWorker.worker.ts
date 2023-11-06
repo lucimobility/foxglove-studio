@@ -4,12 +4,16 @@
 
 import * as Comlink from "comlink";
 
+import Logger from "@foxglove/log";
 import { IterableSourceInitializeArgs } from "@foxglove/studio-base/players/IterablePlayer/IIterableSource";
 import { WorkerIterableSourceWorker } from "@foxglove/studio-base/players/IterablePlayer/WorkerIterableSourceWorker";
 
 import { McapIterableSource } from "./McapIterableSource";
 
+const log = Logger.getLogger(__filename);
+
 export function initialize(args: IterableSourceInitializeArgs): WorkerIterableSourceWorker {
+  log.info("in WorkerIterableSourceWorker.worker");
   if (args.file) {
     const source = new McapIterableSource({ type: "file", file: args.file });
     const wrapped = new WorkerIterableSourceWorker(source);

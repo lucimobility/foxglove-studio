@@ -37,6 +37,7 @@ import {
   PlayerMetricsCollectorInterface,
   TopicStats,
   TopicWithSchemaName,
+  SubscribeAttachmentPayload,
 } from "@foxglove/studio-base/players/types";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 import { bagConnectionsToDatatypes } from "@foxglove/studio-base/util/bagConnectionsHelper";
@@ -552,6 +553,8 @@ export default class RosbridgePlayer implements Player {
       }
     }
   }
+
+  public setAttachmentSubscriptions(_subscriptions: SubscribeAttachmentPayload[]): void {}
 
   public setPublishers(publishers: AdvertiseOptions[]): void {
     // Since `setPublishers` is rarely called, we can get away with just throwing away the old

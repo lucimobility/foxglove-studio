@@ -379,6 +379,7 @@ export default class UserScriptPlayer implements Player {
       // This code causes us to reset workers twice because the seeking resets the workers too
       await this.#resetWorkersUnlocked(state);
       this.#setSubscriptionsUnlocked(this.#subscriptions, state);
+      this.#setAttachmentSubscriptionsUnlocked(this.#attachmentSubscriptions);
 
       const playerState = this.#playerState;
       const lastActive = state.lastPlayerStateActiveData;
@@ -879,6 +880,7 @@ export default class UserScriptPlayer implements Player {
           state.lastPlayerStateActiveData = activeData;
           await this.#resetWorkersUnlocked(state);
           this.#setSubscriptionsUnlocked(this.#subscriptions, state);
+          this.#setAttachmentSubscriptionsUnlocked(this.#attachmentSubscriptions);
         } else {
           // Reset script state after seeking
           let shouldReset =

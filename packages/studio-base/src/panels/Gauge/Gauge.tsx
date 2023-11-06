@@ -6,6 +6,7 @@ import * as _ from "lodash-es";
 import { useCallback, useEffect, useLayoutEffect, useReducer, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import Log from "@foxglove/log";
 import { MessageEvent, PanelExtensionContext, SettingsTreeAction } from "@foxglove/studio";
 import { RosPath } from "@foxglove/studio-base/components/MessagePathSyntax/constants";
 import parseRosPath from "@foxglove/studio-base/components/MessagePathSyntax/parseRosPath";
@@ -14,6 +15,8 @@ import { turboColorString } from "@foxglove/studio-base/util/colorUtils";
 
 import { settingsActionReducer, useSettingsTree } from "./settings";
 import type { Config } from "./types";
+
+const log = Log.getLogger(__filename);
 
 type Props = {
   context: PanelExtensionContext;
@@ -165,17 +168,16 @@ function getConicGradient(config: Config, width: number, height: number, gaugeAn
       .reverse();
   }
 
-  return `conic-gradient(from ${-Math.PI / 2 + gaugeAngle}rad at 50% ${
-    100 * (width / 2 / height)
-  }%, ${colorStops
-    .map((stop) => `${stop.color} ${stop.location * 2 * (Math.PI / 2 - gaugeAngle)}rad`)
-    .join(",")}, ${colorStops[0]!.color})`;
+  return `conic-gradient(from ${-Math.PI / 2 + gaugeAngle}rad at 50% ${100 * (width / 2 / height)
+    }%, ${colorStops
+      .map((stop) => `${stop.color} ${stop.location * 2 * (Math.PI / 2 - gaugeAngle)}rad`)
+      .join(",")}, ${colorStops[0]!.color})`;
 }
 
 export function Gauge({ context }: Props): JSX.Element {
   // panel extensions must notify when they've completed rendering
   // onRender will setRenderDone to a done callback which we can invoke after we've rendered
-  const [renderDone, setRenderDone] = useState<() => void>(() => () => {});
+  const [renderDone, setRenderDone] = useState<() => void>(() => () => { });
 
   const [config, setConfig] = useState(() => ({
     ...defaultConfig,
@@ -241,7 +243,8 @@ export function Gauge({ context }: Props): JSX.Element {
 
   useEffect(() => {
     if (state.parsedPath?.topicName != undefined) {
-      context.subscribe([state.parsedPath.topicName]);
+      context.subscribeAttachment([state.parsedPath.topicName]);
+      log.info("subscribing attachment guage panel");
     }
     return () => {
       context.unsubscribeAll();
@@ -255,7 +258,7 @@ export function Gauge({ context }: Props): JSX.Element {
 
   const rawValue =
     typeof state.latestMatchingQueriedData === "number" ||
-    typeof state.latestMatchingQueriedData === "string"
+      typeof state.latestMatchingQueriedData === "string"
       ? Number(state.latestMatchingQueriedData)
       : NaN;
 
@@ -326,8 +329,7 @@ export function Gauge({ context }: Props): JSX.Element {
               margin: "0 auto",
               transform: [
                 `scaleZ(1)`,
-                `rotate(${
-                  -Math.PI / 2 + gaugeAngle + scaledValue * 2 * (Math.PI / 2 - gaugeAngle)
+                `rotate(${-Math.PI / 2 + gaugeAngle + scaledValue * 2 * (Math.PI / 2 - gaugeAngle)
                 }rad)`,
                 `translateX(${-needleThickness / 2}px)`,
                 `translateY(${needleThickness / 2}px)`,
@@ -341,17 +343,13 @@ export function Gauge({ context }: Props): JSX.Element {
             <path
               transform={`scale(${1 / width}, ${1 / height})`}
               d={[
-                `M ${centerX - radius * Math.cos(gaugeAngle)},${
-                  centerY - radius * Math.sin(gaugeAngle)
+                `M ${centerX - radius * Math.cos(gaugeAngle)},${centerY - radius * Math.sin(gaugeAngle)
                 }`,
-                `A 0.5,0.5 0 ${gaugeAngle < 0 ? 1 : 0} 1 ${
-                  centerX + radius * Math.cos(gaugeAngle)
+                `A 0.5,0.5 0 ${gaugeAngle < 0 ? 1 : 0} 1 ${centerX + radius * Math.cos(gaugeAngle)
                 },${centerY - radius * Math.sin(gaugeAngle)}`,
-                `L ${centerX + innerRadius * Math.cos(gaugeAngle)},${
-                  centerY - innerRadius * Math.sin(gaugeAngle)
+                `L ${centerX + innerRadius * Math.cos(gaugeAngle)},${centerY - innerRadius * Math.sin(gaugeAngle)
                 }`,
-                `A ${innerRadius},${innerRadius} 0 ${gaugeAngle < 0 ? 1 : 0} 0 ${
-                  centerX - innerRadius * Math.cos(gaugeAngle)
+                `A ${innerRadius},${innerRadius} 0 ${gaugeAngle < 0 ? 1 : 0} 0 ${centerX - innerRadius * Math.cos(gaugeAngle)
                 },${centerY - innerRadius * Math.sin(gaugeAngle)}`,
                 `Z`,
               ].join(" ")}

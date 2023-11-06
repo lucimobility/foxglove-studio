@@ -127,7 +127,7 @@ export type MessageEvent<T = unknown> = {
   originalMessageEvent?: MessageEvent;
 };
 
-export type Attachment<T = unknown> = {
+export type Attachment<T = Uint8Array> = {
   name: string;
 
   data: T;
@@ -394,6 +394,10 @@ export type PanelExtensionContext = {
    * @param message The message to publish
    */
   publish?(topic: string, message: unknown): void;
+
+  writeAttachments(attachments: Attachment[]): void;
+
+  writeMetadata(metadata: Metadata[]): void;
 
   /**
    * Call a service.

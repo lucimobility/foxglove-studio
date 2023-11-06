@@ -91,6 +91,7 @@ class RemoteDataSourceFactory implements IDataSourceFactory {
 
     return new IterablePlayer({
       source,
+      writer: undefined,
       name: url,
       metricsCollector: args.metricsCollector,
       // Use blank url params so the data source is set in the url

@@ -52,7 +52,7 @@ export function useSettingsTree(
       fields: {
         path: {
           label: "Message path",
-          input: "messagepath",
+          input: "attachment",
           value: config.path,
           error: pathParseError,
           validTypes: supportedDataTypes,

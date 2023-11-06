@@ -34,7 +34,7 @@ export type ParsedMessageDefinitionsByTopic = {
 
 export type TopicSelection = Map<string, SubscribePayload>;
 
-export type AttachmentNameSelection = Map<string, SubscribePayload>;
+export type AttachmentNameSelection = Map<string, SubscribeAttachmentPayload>;
 
 export type MetadataNameSelection = Map<string, SubscribePayload>;
 
@@ -147,7 +147,7 @@ export type PlayerStateActiveData = {
   messages: readonly MessageEvent[];
   totalBytesReceived: number; // always-increasing
 
-  attachments: readonly Attachment[];
+  attachments?: readonly Attachment[];
 
   // The current playback position, which will be shown in the playback bar. This time should be
   // equal to or later than the latest `receiveTime` in `messages`. Why not just use
@@ -185,7 +185,7 @@ export type PlayerStateActiveData = {
   // present in the `datatypes` field (see below).
   topics: Topic[];
 
-  attachmentNames: string[];
+  attachmentNames?: string[];
 
   // A map of topic names to topic statistics, such as message count. This should be treated as a
   // sparse list that may be missing some or all topics, depending on the active data source and its
@@ -324,10 +324,6 @@ export type SubscribeAttachmentPayload = {
    * Otherwise entire messages will be returned.
    */
   fields?: string[];
-  /**
-   * Defines the range of messages to subscribe to.
-   */
-  preloadType?: SubscriptionPreloadType;
 };
 
 // Represents a single topic publisher, for use in `setPublishers`.

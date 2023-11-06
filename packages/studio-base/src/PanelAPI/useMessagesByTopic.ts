@@ -32,10 +32,12 @@ type UnknownMessageEventsByTopic = Record<string, readonly MessageEvent[]>;
  */
 export function useMessagesByTopic(params: {
   topics: readonly string[] | SubscribePayload[];
+  // attachments: readonly SubscribeAttachmentPayload[];
   historySize: number;
 }): Record<string, readonly MessageEvent[]> {
   const { historySize, topics } = params;
   const requestedTopics = useDeepMemo(topics);
+  // const requestedAttachments = useDeepMemo(attachments);
 
   const addMessages = useCallback(
     (prevMessagesByTopic: UnknownMessageEventsByTopic, messages: readonly MessageEvent[]) => {
@@ -69,6 +71,7 @@ export function useMessagesByTopic(params: {
 
   return useMessageReducer({
     topics: requestedTopics,
+    // attachments: requestedAttachments,
     restore,
     addMessages,
   });

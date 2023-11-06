@@ -98,6 +98,7 @@ function ToolbarComponent(props: Props): JSX.Element {
             path={topicPath}
             onChange={onTopicPathChange}
             inputStyle={{ height: 20 }}
+            attachment={true}
           />
         </Stack>
       </PanelToolbar>

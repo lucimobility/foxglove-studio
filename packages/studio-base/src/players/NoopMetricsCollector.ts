@@ -13,6 +13,7 @@
 import { Time } from "@foxglove/rostime";
 import {
   PlayerMetricsCollectorInterface,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 
@@ -39,6 +40,9 @@ export default class NoopMetricsCollector implements PlayerMetricsCollectorInter
     // no-op
   }
   public setSubscriptions(_subscriptions: SubscribePayload[]): void {
+    // no-op
+  }
+  public setAttachmentSubscriptions(_subscriptions: SubscribeAttachmentPayload[]): void {
     // no-op
   }
   public recordPlaybackTime(_time: Time): void {

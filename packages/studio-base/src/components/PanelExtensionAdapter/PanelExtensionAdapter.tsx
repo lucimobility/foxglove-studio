@@ -130,6 +130,7 @@ function PanelExtensionAdapter(
   const messageConverters = useExtensionCatalog(selectInstalledMessageConverters);
 
   const [localSubscriptions, setLocalSubscriptions] = useState<Subscription[]>([]);
+  const [localAttachmentSubscriptions, setLocalAttachmentSubscriptions] = useState<string[]>([]);
 
   const [appSettings, setAppSettings] = useState(new Map<string, AppSettingValue>());
   const [subscribedAppSettings, setSubscribedAppSettings] = useState<string[]>([]);
@@ -236,6 +237,7 @@ function PanelExtensionAdapter(
       sharedPanelState,
       sortedTopics,
       subscriptions: localSubscriptions,
+      attachmentSubscriptions: localAttachmentSubscriptions,
       watchedFields,
     });
 
@@ -276,6 +278,7 @@ function PanelExtensionAdapter(
     globalVariables,
     hoverValue,
     localSubscriptions,
+    localAttachmentSubscriptions,
     messageConverters,
     messageEvents,
     panelId,
@@ -420,35 +423,33 @@ function PanelExtensionAdapter(
         setSubscriptions(panelId, subscribePayloads);
       },
 
-      subscribeAttachment: (names: ReadonlyArray<string | Subscription>) => {
+      subscribeAttachment: (names: ReadonlyArray<string>) => {
         if (!isMounted()) {
           return;
         }
-        const subscribeAttachmentPayloads = names.map((item): SubscribeAttachmentPayload => {
-          if (typeof item === "string") {
-            // For backwards compatability with the topic-string-array api `subscribe(["/topic"])`
-            // results in a topic subscription with full preloading
-            return { name: item, preloadType: "full" };
-          }
+        const subscribeAttachmentPayloads = names.map((name): SubscribeAttachmentPayload => {
 
           return {
-            name: item.topic,
-            preloadType: item.preload === true ? "full" : "partial",
+            name,
+
           };
         });
 
         // ExtensionPanel-Facing subscription type
-        const localSubs = names.map((item): Subscription => {
-          if (typeof item === "string") {
-            return { topic: item, preload: true };
-          }
+        const localSubs = names.map((item): string => {
 
           return item;
         });
 
-        setLocalSubscriptions(localSubs);
+        log.info("------------------setting attachment subs");
+
+        setLocalAttachmentSubscriptions(localSubs);
         setAttachmentSubscriptions(panelId, subscribeAttachmentPayloads);
       },
+
+      writeAttachments: () => { },
+
+      writeMetadata: () => { },
 
       advertise: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic: string, datatype: string, options) => {

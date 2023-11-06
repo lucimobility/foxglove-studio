@@ -20,10 +20,12 @@ import {
   toString,
 } from "@foxglove/rostime";
 import { Attachment, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
+import { SourceWriter } from "@foxglove/studio-base/players/IterablePlayer/Writer";
 import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsCollector";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
   AdvertiseOptions,
+  AttachmentNameSelection,
   MetadataNameSelection,
   Player,
   PlayerCapabilities,
@@ -74,6 +76,8 @@ type IterablePlayerOptions = {
   metricsCollector?: PlayerMetricsCollectorInterface;
 
   source: IIterableSource;
+
+  writer?: SourceWriter;
 
   // Optional player name
   name?: string;
@@ -167,6 +171,8 @@ export class IterablePlayer implements Player {
   #iterableSource: IIterableSource;
   #bufferedSource: BufferedIterableSource;
 
+  #sourceWriter?: SourceWriter;
+
   // Some states register an abort controller to signal they should abort
   #abort?: AbortController;
 
@@ -190,7 +196,11 @@ export class IterablePlayer implements Player {
   #resolveIsClosed: () => void = () => {};
 
   public constructor(options: IterablePlayerOptions) {
-    const { metricsCollector, urlParams, source, name, enablePreload, sourceId } = options;
+    const { metricsCollector, urlParams, source, writer, name, enablePreload, sourceId } = options;
+
+    if (writer) {
+      this.#sourceWriter = writer;
+    }
 
     this.#iterableSource = source;
     this.#bufferedSource = new BufferedIterableSource(source);

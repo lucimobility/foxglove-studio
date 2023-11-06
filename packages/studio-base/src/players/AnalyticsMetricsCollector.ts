@@ -6,6 +6,7 @@ import Log from "@foxglove/log";
 import { Time } from "@foxglove/rostime";
 import {
   PlayerMetricsCollectorInterface,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import IAnalytics, { AppEvent } from "@foxglove/studio-base/services/IAnalytics";
@@ -56,6 +57,8 @@ export default class AnalyticsMetricsCollector implements PlayerMetricsCollector
   }
 
   public setSubscriptions(_subscriptions: SubscribePayload[]): void {}
+
+  public setAttachmentSubscriptions(_subscriptions: SubscribeAttachmentPayload[]): void {}
 
   public recordBytesReceived(_bytes: number): void {}
 

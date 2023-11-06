@@ -231,6 +231,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
         });
       }
       onChangeProp(value, props.index);
+      // log.info("raw value: ", rawValue, " value: ", value);
     },
     [onChangeProp, props.index],
   );
