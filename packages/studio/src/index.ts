@@ -127,6 +127,23 @@ export type MessageEvent<T = unknown> = {
   originalMessageEvent?: MessageEvent;
 };
 
+export type Attachment<T = Uint8Array> = {
+  name: string;
+
+  data: T;
+
+  mediaType: string;
+
+  createTime?: Time;
+  logTime?: Time;
+};
+
+export type Metadata = {
+  name: string;
+
+  metadata: Map<string, string>;
+};
+
 export interface LayoutActions {
   /** Open a new panel or update an existing panel in the layout.  */
   addPanel(params: {
@@ -394,6 +411,18 @@ export type PanelExtensionContext = {
    * manually. A value of `undefined` will display the panel's name in the title bar.
    */
   setDefaultPanelTitle(defaultTitle: string | undefined): void;
+
+  /**
+   *
+   * @param attachments
+   */
+  writeAttachments?(attachments: Attachment[]): void;
+
+  /**
+   *
+   * @param metadata
+   */
+  writeMetadata?(metadata: Metadata[]): void;
 };
 
 export type ExtensionPanelRegistration = {

@@ -30,7 +30,9 @@ import { createStore } from "zustand";
 
 import { useShallowMemo } from "@foxglove/hooks";
 import {
+  Attachment,
   MessageEvent,
+  Metadata,
   ParameterValue,
   RegisterMessageConverterArgs,
   SettingsTree,
@@ -76,7 +78,7 @@ import { SavedProps, UserScripts } from "@foxglove/studio-base/types/panels";
 
 import "react-mosaic-component/react-mosaic-component.css";
 
-function noop() {}
+function noop() { }
 
 type Frame = {
   [topic: string]: MessageEvent[];
@@ -105,6 +107,8 @@ export type Fixture = {
   callService?: (service: string, request: unknown) => Promise<unknown>;
   messageConverters?: readonly RegisterMessageConverterArgs<unknown>[];
   panelState?: Partial<PanelStateStore>;
+  writeAttachments?(attachments: Attachment[]): void;
+  writeMetadata?(metadata: Metadata[]): void;
 };
 
 type UnconnectedProps = {
@@ -243,9 +247,9 @@ function UnconnectedPanelSetup(props: UnconnectedProps): JSX.Element | ReactNull
     get() {
       return undefined;
     },
-    async set() {},
-    addChangeListener() {},
-    removeChangeListener() {},
+    async set() { },
+    addChangeListener() { },
+    removeChangeListener() { },
   }));
 
   const actions = useCurrentLayoutActions();
@@ -315,6 +319,8 @@ function UnconnectedPanelSetup(props: UnconnectedProps): JSX.Element | ReactNull
     setParameter,
     fetchAsset,
     callService,
+    writeAttachments,
+    writeMetadata,
   } = props.fixture ?? {};
   let dTypes = datatypes;
   if (!dTypes) {
@@ -351,6 +357,8 @@ function UnconnectedPanelSetup(props: UnconnectedProps): JSX.Element | ReactNull
         setParameter={setParameter}
         fetchAsset={fetchAsset ?? defaultFetchAsset}
         callService={callService}
+        writeAttachments={writeAttachments}
+        writeMetadata={writeMetadata}
       >
         <PanelCatalogContext.Provider value={mockPanelCatalog}>
           <AppConfigurationContext.Provider value={mockAppConfiguration}>

@@ -11,7 +11,7 @@ import { act } from "react-dom/test-utils";
 
 import { Condvar, signal } from "@foxglove/den/async";
 import { Time } from "@foxglove/rostime";
-import { PanelExtensionContext, RenderState, MessageEvent, Immutable } from "@foxglove/studio";
+import { PanelExtensionContext, RenderState, MessageEvent, Immutable, Attachment } from "@foxglove/studio";
 import MockPanelContextProvider from "@foxglove/studio-base/components/MockPanelContextProvider";
 import { AdvertiseOptions, PlayerCapabilities } from "@foxglove/studio-base/players/types";
 import PanelSetup, { Fixture } from "@foxglove/studio-base/stories/PanelSetup";
@@ -30,7 +30,7 @@ describe("PanelExtensionAdapter", () => {
     };
 
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const Wrapper = () => {
       return (
@@ -75,7 +75,7 @@ describe("PanelExtensionAdapter", () => {
     });
 
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const message: MessageEvent = {
       topic: "x",
@@ -168,7 +168,7 @@ describe("PanelExtensionAdapter", () => {
               },
             }}
           >
-            <PanelExtensionAdapter config={{}} saveConfig={() => {}} initPanel={initPanel} />
+            <PanelExtensionAdapter config={{}} saveConfig={() => { }} initPanel={initPanel} />
           </PanelSetup>
         </MockPanelContextProvider>
       </ThemeProvider>,
@@ -234,7 +234,7 @@ describe("PanelExtensionAdapter", () => {
               },
             }}
           >
-            <PanelExtensionAdapter config={{}} saveConfig={() => {}} initPanel={initPanel} />
+            <PanelExtensionAdapter config={{}} saveConfig={() => { }} initPanel={initPanel} />
           </PanelSetup>
         </MockPanelContextProvider>
       </ThemeProvider>,
@@ -291,7 +291,7 @@ describe("PanelExtensionAdapter", () => {
               },
             }}
           >
-            <PanelExtensionAdapter config={{}} saveConfig={() => {}} initPanel={initPanel} />
+            <PanelExtensionAdapter config={{}} saveConfig={() => { }} initPanel={initPanel} />
           </PanelSetup>
         </MockPanelContextProvider>
       </ThemeProvider>,
@@ -373,7 +373,7 @@ describe("PanelExtensionAdapter", () => {
               },
             }}
           >
-            <PanelExtensionAdapter config={{}} saveConfig={() => {}} initPanel={initPanel} />
+            <PanelExtensionAdapter config={{}} saveConfig={() => { }} initPanel={initPanel} />
           </PanelSetup>
         </MockPanelContextProvider>
       </ThemeProvider>,
@@ -423,7 +423,7 @@ describe("PanelExtensionAdapter", () => {
     };
 
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const Wrapper = ({ mounted = true }: { mounted?: boolean }) => {
       return (
@@ -452,7 +452,7 @@ describe("PanelExtensionAdapter", () => {
 
     const openSiblingPanel = jest.fn();
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const sig = signal();
 
@@ -528,7 +528,7 @@ describe("PanelExtensionAdapter", () => {
               },
             }}
           >
-            <PanelExtensionAdapter config={{}} saveConfig={() => {}} initPanel={initPanel} />
+            <PanelExtensionAdapter config={{}} saveConfig={() => { }} initPanel={initPanel} />
           </PanelSetup>
         </MockPanelContextProvider>
       </ThemeProvider>,
@@ -566,7 +566,7 @@ describe("PanelExtensionAdapter", () => {
     });
 
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const Wrapper = () => {
       return (
@@ -625,7 +625,7 @@ describe("PanelExtensionAdapter", () => {
     });
 
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const pauseFrameCond = new Condvar();
 
@@ -689,7 +689,7 @@ describe("PanelExtensionAdapter", () => {
     });
 
     const config = {};
-    const saveConfig = () => {};
+    const saveConfig = () => { };
 
     const mockSetSubscriptions = jest.fn();
 
@@ -721,5 +721,53 @@ describe("PanelExtensionAdapter", () => {
       [expect.any(String), [{ preloadType: "full", topic: "x" }]],
       [expect.any(String), []],
     ]);
+  });
+
+  it("should support writing attachments", async () => {
+    const initPanel = jest.fn((context: PanelExtensionContext) => {
+      const array = new TextEncoder().encode(`{"frameTime": 123,"duration": 5,"tags": {"step" : true},}`);
+
+      context.writeAttachments?.([{
+        name: "test",
+        data: array,
+        mediaType: "application/json",
+      }]);
+    });
+
+    const sig = signal();
+    let passed = false;
+    render(
+      <ThemeProvider isDark>
+        <MockPanelContextProvider>
+          <PanelSetup
+            fixture={{
+              capabilities: [PlayerCapabilities.append],
+              topics: [],
+              datatypes: new Map(),
+              frame: {},
+              layout: "UnknownPanel!4co6n9d",
+
+              writeAttachments: (attachments) => {
+                if (passed) {
+                  return;
+                }
+                const array = new TextEncoder().encode(`{"frameTime": 123,"duration": 5,"tags": {"step" : true},}`);
+                expect(attachments).toEqual([{
+                  name: "test",
+                  data: array,
+                  mediaType: "application/json",
+                }]);
+                passed = true;
+                sig.resolve();
+              },
+            }}
+          >
+            <PanelExtensionAdapter config={{}} saveConfig={() => { }} initPanel={initPanel} />
+          </PanelSetup>
+        </MockPanelContextProvider>
+      </ThemeProvider>,
+    );
+    await act(async () => undefined);
+    await sig;
   });
 });

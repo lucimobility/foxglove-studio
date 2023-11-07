@@ -11,7 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { ParameterValue } from "@foxglove/studio";
+import { Attachment, Metadata, ParameterValue } from "@foxglove/studio";
 import {
   PlayerCapabilities,
   PlayerStateActiveData,
@@ -29,6 +29,8 @@ export default class FakePlayer implements Player {
   public publishers: AdvertiseOptions[] | undefined;
   #capabilities: (typeof PlayerCapabilities)[keyof typeof PlayerCapabilities][] = [];
   #profile: string | undefined;
+  public attachments: Attachment[] = [];
+  public metadata: Metadata[] = [];
 
   public setListener(listener: (arg0: PlayerState) => Promise<void>): void {
     this.#listener = listener;
@@ -100,4 +102,10 @@ export default class FakePlayer implements Player {
   public setGlobalVariables = (): void => {
     // no-op
   };
+  public writeAttachments(attachments: Attachment[]): void {
+    this.attachments = attachments;
+  }
+  public writeMetadata(metadata: Metadata[]): void {
+    this.metadata = metadata;
+  }
 }

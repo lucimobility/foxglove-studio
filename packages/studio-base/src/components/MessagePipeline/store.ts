@@ -8,6 +8,7 @@ import shallowequal from "shallowequal";
 import { createStore, StoreApi } from "zustand";
 
 import { Condvar } from "@foxglove/den/async";
+import Log from "@foxglove/log";
 import { Immutable, MessageEvent } from "@foxglove/studio";
 import {
   makeSubscriptionMemoizer,
@@ -26,6 +27,8 @@ import isDesktopApp from "@foxglove/studio-base/util/isDesktopApp";
 
 import { FramePromise } from "./pauseFrameForPromise";
 import { MessagePipelineContext } from "./types";
+
+const log = Log.getLogger(__filename);
 
 export function defaultPlayerState(): PlayerState {
   return {
@@ -154,6 +157,13 @@ export function createMessagePipelineStore({
       },
       publish(payload) {
         get().player?.publish(payload);
+      },
+      writeAttachments(attachments) {
+        log.info("writing attachments in message pipeline store for player: ", get().player);
+        get().player?.writeAttachments?.(attachments);
+      },
+      writeMetadata(metadata) {
+        get().player?.writeMetadata?.(metadata);
       },
       async callService(service, request) {
         const player = get().player;

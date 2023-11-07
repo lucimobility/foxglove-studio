@@ -244,13 +244,13 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
               setBasePlayer(newPlayer);
               return;
             } else if (handle) {
-              const permission = await handle.queryPermission({ mode: "read" });
+              const permission = await handle.queryPermission({ mode: "readwrite" });
               if (!isMounted()) {
                 return;
               }
 
               if (permission !== "granted") {
-                const newPerm = await handle.requestPermission({ mode: "read" });
+                const newPerm = await handle.requestPermission({ mode: "readwrite" });
                 if (newPerm !== "granted") {
                   throw new Error(`Permission denied: ${handle.name}`);
                 }
@@ -267,8 +267,11 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
 
               const newPlayer = foundSource.initialize({
                 file,
+                handle,
                 metricsCollector,
               });
+
+              log.info("new player: ", newPlayer);
 
               setBasePlayer(newPlayer);
               addRecent({

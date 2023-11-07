@@ -22,7 +22,7 @@ import { MutexLocked } from "@foxglove/den/async";
 import { filterMap } from "@foxglove/den/collection";
 import Log from "@foxglove/log";
 import { Time, compare } from "@foxglove/rostime";
-import { ParameterValue } from "@foxglove/studio";
+import { Attachment, Metadata, ParameterValue } from "@foxglove/studio";
 import { Asset } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import {
   IPerformanceRegistry,
@@ -1085,6 +1085,15 @@ export default class UserScriptPlayer implements Player {
 
   public publish(request: PublishPayload): void {
     this.#player.publish(request);
+  }
+
+  public async writeAttachments(attachments: Attachment[]): Promise<void> {
+    log.info("writing attachments in user script player internal player: ", this.#player);
+    this.#player.writeAttachments?.(attachments);
+  }
+
+  public async writeMetadata(metadata: Metadata[]): Promise<void> {
+    this.#player.writeMetadata?.(metadata);
   }
 
   public async callService(service: string, request: unknown): Promise<unknown> {

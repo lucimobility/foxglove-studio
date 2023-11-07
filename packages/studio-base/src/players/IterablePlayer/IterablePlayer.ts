@@ -19,7 +19,8 @@ import {
   toRFC3339String,
   toString,
 } from "@foxglove/rostime";
-import { MessageEvent, ParameterValue } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
+import { SourceAppender } from "@foxglove/studio-base/players/IterablePlayer/SourceAppender";
 import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsCollector";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
@@ -72,6 +73,9 @@ type IterablePlayerOptions = {
   metricsCollector?: PlayerMetricsCollectorInterface;
 
   source: IIterableSource;
+
+  // Optional local Mcap appender
+  appender?: SourceAppender;
 
   // Optional player name
   name?: string;
@@ -129,7 +133,11 @@ export class IterablePlayer implements Player {
   #providerTopicStats = new Map<string, TopicStats>();
   #providerDatatypes: RosDatatypes = new Map();
 
-  #capabilities: string[] = [PlayerCapabilities.setSpeed, PlayerCapabilities.playbackControl];
+  #capabilities: string[] = [
+    PlayerCapabilities.setSpeed,
+    PlayerCapabilities.playbackControl,
+    PlayerCapabilities.append,
+  ];
   #profile: string | undefined;
   #metricsCollector: PlayerMetricsCollectorInterface;
   #subscriptions: SubscribePayload[] = [];
@@ -157,6 +165,8 @@ export class IterablePlayer implements Player {
   #iterableSource: IIterableSource;
   #bufferedSource: BufferedIterableSource;
 
+  #appender?: SourceAppender;
+
   // Some states register an abort controller to signal they should abort
   #abort?: AbortController;
 
@@ -177,8 +187,12 @@ export class IterablePlayer implements Player {
   #resolveIsClosed: () => void = () => {};
 
   public constructor(options: IterablePlayerOptions) {
-    const { metricsCollector, urlParams, source, name, enablePreload, sourceId } = options;
+    const { metricsCollector, urlParams, source, appender, name, enablePreload, sourceId } =
+      options;
 
+    if (appender) {
+      this.#appender = appender;
+    }
     this.#iterableSource = source;
     this.#bufferedSource = new BufferedIterableSource(source);
     this.#name = name;
@@ -358,6 +372,14 @@ export class IterablePlayer implements Player {
     throw new Error("Service calls are not supported by this data source");
   }
 
+  public async writeAttachments(attachments: Attachment[]): Promise<void> {
+    await this.#appender?.writeAttachments(attachments);
+  }
+
+  public async writeMetadata(metadata: Metadata[]): Promise<void> {
+    await this.#appender?.writeMetadata(metadata);
+  }
+
   public close(): void {
     this.#setState("close");
   }
@@ -470,6 +492,10 @@ export class IterablePlayer implements Player {
         datatypes,
         name,
       } = await this.#bufferedSource.initialize();
+
+      if (this.#appender) {
+        await this.#appender.initialize();
+      }
 
       // Prior to initialization, the seekTarget may have been set to an out-of-bounds value
       // This brings the value in bounds
@@ -1070,6 +1096,7 @@ export class IterablePlayer implements Player {
     await this.#playbackIterator?.return?.();
     this.#playbackIterator = undefined;
     await this.#iterableSource.terminate?.();
+    await this.#appender?.terminate?.();
     this.#resolveIsClosed();
   }
 

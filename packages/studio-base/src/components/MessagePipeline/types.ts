@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Time } from "@foxglove/rostime";
-import { Immutable, MessageEvent, ParameterValue } from "@foxglove/studio";
+import { Attachment, Immutable, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
 import { BuiltinPanelExtensionContext } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import {
   AdvertiseOptions,
@@ -34,4 +34,7 @@ export type MessagePipelineContext = Immutable<{
   seekPlayback?: (time: Time) => void;
   // Don't render the next frame until the returned function has been called.
   pauseFrame: (name: string) => ResumeFrame;
+
+  writeAttachments: (attachments: Attachment[]) => void;
+  writeMetadata: (metadata: Metadata[]) => void;
 }>;

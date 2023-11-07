@@ -16,18 +16,25 @@ import { useEffect, useMemo } from "react";
 import { makeStyles } from "tss-react/mui";
 import { useDebounce } from "use-debounce";
 
+import Log from "@foxglove/log";
+import { fromNanoSec } from "@foxglove/rostime";
+import { Attachment } from "@foxglove/studio";
 import { useDataSourceInfo } from "@foxglove/studio-base/PanelAPI";
 import Panel from "@foxglove/studio-base/components/Panel";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
 import Stack from "@foxglove/studio-base/components/Stack";
 import useCallbackWithToast from "@foxglove/studio-base/hooks/useCallbackWithToast";
 import usePublisher from "@foxglove/studio-base/hooks/usePublisher";
+import useWriteAttachments from "@foxglove/studio-base/hooks/useWriteAttachments";
 import { PlayerCapabilities } from "@foxglove/studio-base/players/types";
 import { useDefaultPanelTitle } from "@foxglove/studio-base/providers/PanelStateContextProvider";
 import { SaveConfig } from "@foxglove/studio-base/types/panels";
 
 import { defaultConfig, usePublishPanelSettings } from "./settings";
 import { PublishConfig } from "./types";
+
+
+const log = Log.getLogger(__filename);
 
 type Props = {
   config: PublishConfig;
@@ -37,8 +44,8 @@ type Props = {
 const useStyles = makeStyles<{ buttonColor?: string }>()((theme, { buttonColor }) => {
   const augmentedButtonColor = buttonColor
     ? theme.palette.augmentColor({
-        color: { main: buttonColor },
-      })
+      color: { main: buttonColor },
+    })
     : undefined;
 
   return {
@@ -106,17 +113,29 @@ function Publish(props: Props) {
     datatypes,
   });
 
+  const writeAttachments = useWriteAttachments();
+
   const { error, parsedObject } = useMemo(() => parseInput(config.value ?? ""), [config.value]);
 
   usePublishPanelSettings(config, saveConfig, topics, datatypes);
 
   const onPublishClicked = useCallbackWithToast(() => {
+    const array = new TextEncoder().encode(`{"frameTime": 123,"duration": 5,"tags": {"step" : true},}`);
+    const attachment: Attachment = {
+      name: "test",
+      data: array,
+      mediaType: "application/json",
+      logTime: fromNanoSec(BigInt(54321)),
+      createTime: fromNanoSec(BigInt(12345)),
+    };
+    log.info("writing attachments from publisher");
+    writeAttachments([attachment]);
     if (config.topicName != undefined && parsedObject != undefined) {
       publish(parsedObject as Record<string, unknown>);
     } else {
       throw new Error(`called _publish() when input was invalid`);
     }
-  }, [config.topicName, parsedObject, publish]);
+  }, [config.topicName, parsedObject, publish, writeAttachments]);
 
   const [, setDefaultPanelTitle] = useDefaultPanelTitle();
 
@@ -130,10 +149,10 @@ function Publish(props: Props) {
 
   const canPublish = Boolean(
     capabilities.includes(PlayerCapabilities.advertise) &&
-      config.value &&
-      config.topicName &&
-      config.datatype &&
-      parsedObject != undefined,
+    config.value &&
+    config.topicName &&
+    config.datatype &&
+    parsedObject != undefined,
   );
 
   const statusMessage = useMemo(() => {
@@ -187,7 +206,7 @@ function Publish(props: Props) {
               <Button
                 className={classes.button}
                 variant="contained"
-                disabled={!canPublish}
+                // disabled={!canPublish}
                 onClick={onPublishClicked}
               >
                 {config.buttonText}
