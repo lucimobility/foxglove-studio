@@ -41,6 +41,11 @@ class FileHandleWritable implements IWritable {
   public async close(): Promise<void> {
     await this.#handle.close();
   }
+
+  public async seek(position: number): Promise<void> {
+    this.#totalBytesWritten = position;
+    await this.#handle.seek(position);
+  }
 }
 
 async function delay(ms: number) {
@@ -155,8 +160,9 @@ export class McapSourceAppender implements SourceAppender {
           reader.statistics!.channelMessageCounts,
         );
 
-        await writable.seek(Number(reader.dataEndOffset));
-        fileHandleWritable.setPosition(Number(reader.dataEndOffset));
+        await fileHandleWritable.seek(Number(reader.dataEndOffset));
+        // await writable.seek(Number(reader.dataEndOffset));
+        // fileHandleWritable.setPosition(Number(reader.dataEndOffset));
 
         // await delay(2000);
 
@@ -205,8 +211,8 @@ export class McapSourceAppender implements SourceAppender {
       log.info("writing attachment: ", attachment);
       await this.#appender.addAttachment({
         name: attachment.name,
-        logTime: toNanoSec(attachment.logTime!),
-        createTime: toNanoSec(attachment.createTime!),
+        logTime: toNanoSec(attachment.logTime ? attachment.logTime : { sec: 0, nsec: 0 }),
+        createTime: toNanoSec(attachment.createTime ? attachment.createTime : { sec: 0, nsec: 0 }),
         data: attachment.data,
         mediaType: attachment.mediaType,
       });

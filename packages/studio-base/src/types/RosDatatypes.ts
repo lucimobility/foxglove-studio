@@ -24,3 +24,5 @@ export type OptionalMessageDefinition = MessageDefinition & {
 
 /** RosDatatypes is a map of datatype name to the datatype definition */
 export type RosDatatypes = Map<string, OptionalMessageDefinition>;
+
+export type MediaDatatypes = Map<string, OptionalMessageDefinition>;
