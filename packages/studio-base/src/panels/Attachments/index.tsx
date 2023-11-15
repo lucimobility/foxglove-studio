@@ -118,7 +118,8 @@ function WriteAttachment(props: Props) {
   useAttachmentPanelSettings(config, saveConfig, ["application/json"]);
 
   const onAddAttachmentClicked = useCallbackWithToast(() => {
-    const attachment: Attachment = { name: attachmentName, mediaType: config.datatype, data: new TextEncoder().encode(parsedObject) };
+    const attachmentData = new TextEncoder().encode(parsedObject);
+    const attachment: Attachment = { name: attachmentName, mediaType: config.datatype, data: attachmentData };
     log.info("writing attachments from attachment panel: ", attachment);
 
     if (parsedObject != undefined) {

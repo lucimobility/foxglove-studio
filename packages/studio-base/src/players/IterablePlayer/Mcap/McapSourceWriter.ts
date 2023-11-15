@@ -2,7 +2,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { IWritable, McapTypes, McapWriter } from "@mcap/core";
+import { IAppendWritable, McapTypes, McapWriter } from "@mcap/core";
 
 import Log from "@foxglove/log";
 import { Attachment, Metadata } from "@foxglove/studio";
@@ -14,7 +14,7 @@ const log = Log.getLogger(__filename);
 type McapSource = { type: "file"; file: File; handle: FileSystemFileHandle };
 
 // Mcap IWritable interface for nodejs FileHandle
-class FileHandleWritable implements IWritable {
+class FileHandleWritable implements IAppendWritable {
   #handle: FileSystemWritableFileStream;
   #totalBytesWritten = 0;
 
