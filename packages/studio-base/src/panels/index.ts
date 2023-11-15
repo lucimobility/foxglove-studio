@@ -13,6 +13,7 @@ import imageThumbnail from "./Image/thumbnail.png";
 import indicatorThumbnail from "./Indicator/thumbnail.png";
 import logThumbnail from "./Log/thumbnail.png";
 import mapThumbnail from "./Map/thumbnail.png";
+import metadataThumnnail from "./Metadata/thumbnail.png";
 import parametersThumbnail from "./Parameters/thumbnail.png";
 import plotThumbnail from "./Plot/thumbnail.png";
 import publishThumbnail from "./Publish/thumbnail.png";
@@ -113,6 +114,13 @@ export const getBuiltin: (t: TFunction<"panels">) => PanelInfo[] = (t) => [
     description: t("attachmentDescription"),
     thumbnail: attachmentThumnnail,
     module: async () => await import("./Attachments"),
+  },
+  {
+    title: t("addMetadata"),
+    type: "Metadata",
+    description: t("metadataDescription"),
+    thumbnail: metadataThumnnail,
+    module: async () => await import("./Metadata"),
   },
   {
     title: t("callService"),

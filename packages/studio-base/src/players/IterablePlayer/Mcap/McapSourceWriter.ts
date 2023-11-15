@@ -5,8 +5,7 @@
 import { IWritable, McapTypes, McapWriter } from "@mcap/core";
 
 import Log from "@foxglove/log";
-import { toNanoSec } from "@foxglove/rostime";
-import { Attachment, Metadata, Time } from "@foxglove/studio";
+import { Attachment, Metadata } from "@foxglove/studio";
 import { BlobReadable } from "@foxglove/studio-base/players/IterablePlayer/Mcap/BlobReadable";
 import { SourceWriter } from "@foxglove/studio-base/players/IterablePlayer/SourceWriter";
 
@@ -49,25 +48,6 @@ class FileHandleWritable implements IWritable {
 async function delay(ms: number) {
   return await new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-// /**
-//  * Create a McapIndexedReader if it will be possible to do an indexed read. If the file is not
-//  * indexed or is empty, returns undefined.
-//  */
-// async function tryCreateIndexedReader(readable: McapTypes.IReadable) {
-//   const decompressHandlers = await loadDecompressHandlers();
-//   try {
-//     const reader = await McapIndexedReader.Initialize({ readable, decompressHandlers });
-
-//     if (reader.chunkIndexes.length === 0 || reader.channelsById.size === 0) {
-//       return undefined;
-//     }
-//     return reader;
-//   } catch (err) {
-//     log.error(err);
-//     return undefined;
-//   }
-// }
 
 async function tryCreateWriter(
   fileHandleWritable: FileHandleWritable,
@@ -113,88 +93,6 @@ export class McapSourceWriter implements SourceWriter {
       this.#writer = writer;
 
       log.info("writer: ", writer);
-
-      // const attachmentIndexes: AttachmentIndex[] = [];
-      // const metadataIndexes: MetadataIndex[] = [];
-
-      // reader.attachmentIndexes.forEach(async (attachmentIndex) => {
-      //   attachmentIndexes.push(attachmentIndex);
-      // });
-
-      // reader.metadataIndexes.forEach(async (metadataIndex) => {
-      //   metadataIndexes.push(metadataIndex);
-      // });
-
-      // log.info("attachment indexes: ", attachmentIndexes);
-      // log.info("metadata indexes: ", metadataIndexes);
-
-      // reader.schemasById.forEach(async (schema) => {
-      //   await writer.registerSchema(schema);
-      // });
-      // reader.channelsById.forEach(async (channel) => {
-      //   await writer.registerChannel(channel);
-      // });
-
-      // await delay(1000);
-
-      // attachmentIndexes.forEach(async (attachmentIndex) => {
-      //   await writer.addAttachmentIndex(attachmentIndex);
-      // });
-
-      // metadataIndexes.forEach(async (metadataIndex) => {
-      //   await writer.addMetadataIndex(metadataIndex);
-      // });
-
-      // reader.chunkIndexes.forEach(async (chunkIndex) => {
-      //   await writer.addChunkIndex(chunkIndex);
-      // });
-
-      // await writer.setStatistics(
-      //   reader.statistics!.messageCount,
-      //   reader.statistics!.messageStartTime,
-      //   reader.statistics!.messageEndTime,
-      //   reader.statistics!.chunkCount,
-      //   reader.statistics!.channelMessageCounts,
-      // );
-
-      // await fileHandleWritable.seek(Number(reader.dataEndOffset));
-      // await writable.seek(Number(reader.dataEndOffset));
-      // fileHandleWritable.setPosition(Number(reader.dataEndOffset));
-
-      // await delay(2000);
-
-      // const array = new TextEncoder().encode(
-      //   `{
-      //       "frameTime": 123,
-      //       "duration": 5,
-      //       "tags": {
-      //         "step" : true
-      //       },
-      //        }`,
-      // );
-
-      // await writer.addAttachment({
-      //   name: "test",
-      //   logTime: toNanoSec({ sec: 54321, nsec: 12345 }),
-      //   createTime: toNanoSec({ sec: 12345, nsec: 54321 }),
-      //   mediaType: "application/json",
-      //   data: array,
-      // });
-
-      // await writer.addMetadata({
-      //   name: "test",
-      //   metadata: new Map(),
-      // });
-
-      // log.info("old data end offset: ", reader.dataEndOffset);
-
-      // await delay(2000);
-
-      // log.info(writer);
-
-      // await writer.end();
-      // await delay(2000);
-      // await fileHandleWritable.close();
     }
   }
 
@@ -215,10 +113,7 @@ export class McapSourceWriter implements SourceWriter {
       });
     }
 
-    await this.#writer.end();
-    await delay(2000);
-
-    await this.#fileHandleWritable.close();
+    await this.terminate();
   }
 
   public async writeMetadata(metadata: Metadata[]): Promise<void> {
@@ -230,6 +125,8 @@ export class McapSourceWriter implements SourceWriter {
       await this.#writer.addMetadata(data);
       log.info("writing metadata: ", data);
     }
+
+    await this.terminate();
   }
 
   public async terminate(): Promise<void> {
