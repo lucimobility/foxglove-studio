@@ -11,12 +11,11 @@ import buildSampleMessage from "@foxglove/studio-base/panels/Attachments/buildSa
 import { usePanelSettingsTreeUpdate } from "@foxglove/studio-base/providers/PanelStateContextProvider";
 import { SaveConfig } from "@foxglove/studio-base/types/panels";
 
-import { PublishConfig } from "./types";
+import { AttachmentConfig } from "./types";
 
-export const defaultConfig: PublishConfig = {
-  buttonText: "Publish",
+export const defaultConfig: AttachmentConfig = {
+  buttonText: "Add Attachment",
   buttonTooltip: "",
-  advancedView: true,
   value: "{}",
 };
 
@@ -30,7 +29,7 @@ function datatypeError(schemaNames: string[], datatype?: string) {
   return undefined;
 }
 
-const buildSettingsTree = (config: PublishConfig, mediaTypes: string[]): SettingsTreeNodes => ({
+const buildSettingsTree = (config: AttachmentConfig, mediaTypes: string[]): SettingsTreeNodes => ({
   general: {
     fields: {
       datatype: {
@@ -67,8 +66,8 @@ const getSampleMessage = (
 };
 
 export function useAttachmentPanelSettings(
-  config: PublishConfig,
-  saveConfig: SaveConfig<PublishConfig>,
+  config: AttachmentConfig,
+  saveConfig: SaveConfig<AttachmentConfig>,
   // datatypes: Immutable<RosDatatypes>,
   datatypes: string[],
 ): void {
@@ -83,7 +82,7 @@ export function useAttachmentPanelSettings(
       const { path, value, input } = action.payload;
 
       saveConfig(
-        produce<PublishConfig>((draft) => {
+        produce<AttachmentConfig>((draft) => {
           if (input === "autocomplete") {
             if (_.isEqual(path, ["general", "datatype"])) {
               const sampleMessage = getSampleMessage(datatypes, value);

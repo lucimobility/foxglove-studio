@@ -134,8 +134,8 @@ export type Attachment<T = Uint8Array> = {
 
   mediaType: string;
 
-  createTime?: Time;
-  logTime?: Time;
+  createTime?: bigint;
+  logTime?: bigint;
 };
 
 export type Metadata = {

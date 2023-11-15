@@ -33,6 +33,6 @@ export default function buildSampleMessage(datatypes: string[], datatype: string
   if (builtin != undefined) {
     return builtin;
   }
-  const obj = { name: "", mediaType: datatype, data: "" };
+  const obj = {};
   return obj;
 }

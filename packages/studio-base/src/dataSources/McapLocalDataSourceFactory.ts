@@ -10,7 +10,7 @@ import {
 import {
   IterablePlayer,
   WorkerIterableSource,
-  WorkerSourceAppender,
+  WorkerSourceWriter,
 } from "@foxglove/studio-base/players/IterablePlayer";
 import { Player } from "@foxglove/studio-base/players/types";
 
@@ -45,12 +45,12 @@ class McapLocalDataSourceFactory implements IDataSourceFactory {
 
     log.info(source);
 
-    const appender = new WorkerSourceAppender({
+    const writer = new WorkerSourceWriter({
       initWorker: () => {
         return new Worker(
           // foxglove-depcheck-used: babel-plugin-transform-import-meta
           new URL(
-            "@foxglove/studio-base/players/IterablePlayer/Mcap/McapSourceAppenderWorker.worker",
+            "@foxglove/studio-base/players/IterablePlayer/Mcap/McapSourceWriterWorker.worker",
             import.meta.url,
           ),
         );
@@ -58,12 +58,12 @@ class McapLocalDataSourceFactory implements IDataSourceFactory {
       initArgs: { file, handle },
     });
 
-    log.info(appender);
+    log.info(writer);
 
     return new IterablePlayer({
       metricsCollector: args.metricsCollector,
       source,
-      appender,
+      writer,
       name: file.name,
       sourceId: this.id,
     });

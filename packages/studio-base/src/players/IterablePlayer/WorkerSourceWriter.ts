@@ -8,10 +8,10 @@ import { abortSignalTransferHandler } from "@foxglove/comlink-transfer-handlers"
 import Log from "@foxglove/log";
 import { Attachment, Immutable, Metadata } from "@foxglove/studio";
 import {
-  SourceAppender,
-  SourceAppenderInitializeArgs,
-} from "@foxglove/studio-base/players/IterablePlayer/SourceAppender";
-import { WorkerSourceAppenderWorker } from "@foxglove/studio-base/players/IterablePlayer/WorkerSourceAppenderWorker";
+  SourceWriter,
+  SourceWriterInitializeArgs,
+} from "@foxglove/studio-base/players/IterablePlayer/SourceWriter";
+import { WorkerSourceWriterWorker } from "@foxglove/studio-base/players/IterablePlayer/WorkerSourceWriterWorker";
 
 const log = Log.getLogger(__filename);
 
@@ -19,14 +19,14 @@ Comlink.transferHandlers.set("abortsignal", abortSignalTransferHandler);
 
 type ConstructorArgs = {
   initWorker: () => Worker;
-  initArgs: SourceAppenderInitializeArgs;
+  initArgs: SourceWriterInitializeArgs;
 };
 
-export class WorkerSourceAppender implements SourceAppender {
+export class WorkerSourceWriter implements SourceWriter {
   readonly #args: ConstructorArgs;
 
   #thread?: Worker;
-  #worker?: Comlink.Remote<WorkerSourceAppenderWorker>;
+  #worker?: Comlink.Remote<WorkerSourceWriterWorker>;
 
   public constructor(args: ConstructorArgs) {
     this.#args = args;
@@ -37,7 +37,7 @@ export class WorkerSourceAppender implements SourceAppender {
     this.#thread = this.#args.initWorker();
 
     const initialize = Comlink.wrap<
-      (args: SourceAppenderInitializeArgs) => Comlink.Remote<WorkerSourceAppenderWorker>
+      (args: SourceWriterInitializeArgs) => Comlink.Remote<WorkerSourceWriterWorker>
     >(this.#thread);
 
     const worker = (this.#worker = await initialize(this.#args.initArgs));
@@ -48,14 +48,14 @@ export class WorkerSourceAppender implements SourceAppender {
 
   public async writeAttachments(attachments: Immutable<Attachment[]>): Promise<void> {
     if (this.#worker == undefined) {
-      throw new Error(`WorkerSourceAppender is not initialized`);
+      throw new Error(`WorkerSourceWriter is not initialized`);
     }
     await this.#worker.writeAttachments(attachments);
   }
 
   public async writeMetadata(metadata: Immutable<Metadata[]>): Promise<void> {
     if (this.#worker == undefined) {
-      throw new Error(`WorkerSourceAppender is not initialized`);
+      throw new Error(`WorkerSourceWriter is not initialized`);
     }
     await this.#worker.writeMetadata(metadata);
   }

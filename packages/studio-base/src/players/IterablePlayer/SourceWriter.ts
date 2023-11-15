@@ -17,7 +17,7 @@ export type Initialization = {
  *
  * IIterableSources also provide a backfill method to obtain the last message available for topics.
  */
-export interface SourceAppender {
+export interface SourceWriter {
   /**
    * Initialize the source.
    */
@@ -34,7 +34,7 @@ export interface SourceAppender {
   terminate?: () => Promise<void>;
 }
 
-export type SourceAppenderInitializeArgs = {
+export type SourceWriterInitializeArgs = {
   file?: File;
   handle?: FileSystemFileHandle;
   writable?: FileSystemWritableFileStream;

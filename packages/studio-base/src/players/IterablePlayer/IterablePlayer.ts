@@ -20,7 +20,7 @@ import {
   toString,
 } from "@foxglove/rostime";
 import { Attachment, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
-import { SourceAppender } from "@foxglove/studio-base/players/IterablePlayer/SourceAppender";
+import { SourceWriter } from "@foxglove/studio-base/players/IterablePlayer/SourceWriter";
 import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsCollector";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
@@ -74,8 +74,8 @@ type IterablePlayerOptions = {
 
   source: IIterableSource;
 
-  // Optional local Mcap appender
-  appender?: SourceAppender;
+  // Optional local Mcap writer
+  writer?: SourceWriter;
 
   // Optional player name
   name?: string;
@@ -165,7 +165,7 @@ export class IterablePlayer implements Player {
   #iterableSource: IIterableSource;
   #bufferedSource: BufferedIterableSource;
 
-  #appender?: SourceAppender;
+  #writer?: SourceWriter;
 
   // Some states register an abort controller to signal they should abort
   #abort?: AbortController;
@@ -187,11 +187,10 @@ export class IterablePlayer implements Player {
   #resolveIsClosed: () => void = () => {};
 
   public constructor(options: IterablePlayerOptions) {
-    const { metricsCollector, urlParams, source, appender, name, enablePreload, sourceId } =
-      options;
+    const { metricsCollector, urlParams, source, writer, name, enablePreload, sourceId } = options;
 
-    if (appender) {
-      this.#appender = appender;
+    if (writer) {
+      this.#writer = writer;
     }
     this.#iterableSource = source;
     this.#bufferedSource = new BufferedIterableSource(source);
@@ -373,11 +372,11 @@ export class IterablePlayer implements Player {
   }
 
   public async writeAttachments(attachments: Attachment[]): Promise<void> {
-    await this.#appender?.writeAttachments(attachments);
+    await this.#writer?.writeAttachments(attachments);
   }
 
   public async writeMetadata(metadata: Metadata[]): Promise<void> {
-    await this.#appender?.writeMetadata(metadata);
+    await this.#writer?.writeMetadata(metadata);
   }
 
   public close(): void {
@@ -493,8 +492,8 @@ export class IterablePlayer implements Player {
         name,
       } = await this.#bufferedSource.initialize();
 
-      if (this.#appender) {
-        await this.#appender.initialize();
+      if (this.#writer) {
+        await this.#writer.initialize();
       }
 
       // Prior to initialization, the seekTarget may have been set to an out-of-bounds value
@@ -1096,7 +1095,7 @@ export class IterablePlayer implements Player {
     await this.#playbackIterator?.return?.();
     this.#playbackIterator = undefined;
     await this.#iterableSource.terminate?.();
-    await this.#appender?.terminate?.();
+    await this.#writer?.terminate?.();
     this.#resolveIsClosed();
   }
 

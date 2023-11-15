@@ -6,12 +6,12 @@ import * as Comlink from "comlink";
 
 import { abortSignalTransferHandler } from "@foxglove/comlink-transfer-handlers";
 import { Attachment, Immutable, Metadata } from "@foxglove/studio";
-import { SourceAppender } from "@foxglove/studio-base/players/IterablePlayer/SourceAppender";
+import { SourceWriter } from "@foxglove/studio-base/players/IterablePlayer/SourceWriter";
 
-export class WorkerSourceAppenderWorker implements SourceAppender {
-  protected _source: SourceAppender;
+export class WorkerSourceWriterWorker implements SourceWriter {
+  protected _source: SourceWriter;
 
-  public constructor(source: SourceAppender) {
+  public constructor(source: SourceWriter) {
     this._source = source;
   }
 

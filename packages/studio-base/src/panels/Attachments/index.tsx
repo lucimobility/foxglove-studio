@@ -12,7 +12,7 @@
 //   You may not use this file except in compliance with the License.
 
 import { Button, inputBaseClasses, TextField, Tooltip, Typography } from "@mui/material";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { makeStyles } from "tss-react/mui";
 
 import Log from "@foxglove/log";
@@ -28,14 +28,14 @@ import { useDefaultPanelTitle } from "@foxglove/studio-base/providers/PanelState
 import { SaveConfig } from "@foxglove/studio-base/types/panels";
 
 import { defaultConfig, useAttachmentPanelSettings } from "./settings";
-import { PublishConfig } from "./types";
+import { AttachmentConfig } from "./types";
 
 
 const log = Log.getLogger(__filename);
 
 type Props = {
-  config: PublishConfig;
-  saveConfig: SaveConfig<PublishConfig>;
+  config: AttachmentConfig;
+  saveConfig: SaveConfig<AttachmentConfig>;
 };
 
 const useStyles = makeStyles<{ buttonColor?: string }>()((theme, { buttonColor }) => {
@@ -102,20 +102,31 @@ function WriteAttachment(props: Props) {
   const { capabilities } = useDataSourceInfo();
   const { classes } = useStyles({ buttonColor: config.buttonColor });
 
+  const [attachmentName, setAttachmentName] = useState<string>("");
+
   const writeAttachments = useWriteAttachments();
 
   const { error, parsedObject } = useMemo(() => parseInput(config.value ?? ""), [config.value]);
+  const nameError = useMemo(() => {
+    let errorWithName = undefined;
+    if (attachmentName === "") {
+      errorWithName = "Name must have a value";
+    }
+    return errorWithName;
+  }, [attachmentName]);
 
   useAttachmentPanelSettings(config, saveConfig, ["application/json"]);
 
   const onAddAttachmentClicked = useCallbackWithToast(() => {
-    log.info("writing attachments from attachment panel");
+    const attachment: Attachment = { name: attachmentName, mediaType: config.datatype, data: new TextEncoder().encode(parsedObject) };
+    log.info("writing attachments from attachment panel: ", attachment);
+
     if (parsedObject != undefined) {
-      writeAttachments([parsedObject as Attachment]);
+      writeAttachments([attachment]);
     } else {
       throw new Error(`called _writeAttachment() when input was invalid`);
     }
-  }, [parsedObject, writeAttachments]);
+  }, [attachmentName, config.datatype, parsedObject, writeAttachments]);
 
   const [, setDefaultPanelTitle] = useDefaultPanelTitle();
 
@@ -127,6 +138,7 @@ function WriteAttachment(props: Props) {
     capabilities.includes(PlayerCapabilities.append) &&
     config.value &&
     config.datatype &&
+    attachmentName &&
     parsedObject != undefined,
   );
 
@@ -144,10 +156,25 @@ function WriteAttachment(props: Props) {
     <Stack fullHeight>
       <PanelToolbar />
       <Stack flex="auto" gap={1} padding={1.5} position="relative">
-        {config.advancedView && (
+        <Stack flexGrow="1">
+          <Stack >
+            <TextField
+              variant="outlined"
+              label="Name"
+              className={classes.textarea}
+              size="small"
+              placeholder="Attachment Name"
+              value={attachmentName}
+              onChange={(event) => {
+                setAttachmentName(event.target.value);
+              }}
+              error={nameError != undefined}
+            />
+          </Stack>
           <Stack flexGrow="1">
             <TextField
               variant="outlined"
+              label="Data"
               className={classes.textarea}
               multiline
               size="small"
@@ -159,10 +186,10 @@ function WriteAttachment(props: Props) {
               error={error != undefined}
             />
           </Stack>
-        )}
+        </Stack>
         <Stack
-          direction={config.advancedView ? "row" : "column-reverse"}
-          justifyContent={config.advancedView ? "flex-end" : "center"}
+          direction="row"
+          justifyContent="flex-end"
           alignItems="center"
           overflow="hidden"
           flexGrow={0}
@@ -173,8 +200,13 @@ function WriteAttachment(props: Props) {
               {error ?? statusMessage}
             </Typography>
           )}
+          {(nameError != undefined || statusMessage != undefined) && (
+            <Typography variant="caption" noWrap color={nameError ? "error" : undefined}>
+              {nameError ?? statusMessage}
+            </Typography>
+          )}
           <Tooltip
-            placement={config.advancedView ? "left" : undefined}
+            placement="left"
             title={config.buttonTooltip}
           >
             <span>
