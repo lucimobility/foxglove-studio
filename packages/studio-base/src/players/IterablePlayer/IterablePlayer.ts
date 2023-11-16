@@ -25,6 +25,8 @@ import NoopMetricsCollector from "@foxglove/studio-base/players/NoopMetricsColle
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
 import {
   AdvertiseOptions,
+  AttachmentNameSelection,
+  MetadataNameSelection,
   Player,
   PlayerCapabilities,
   PlayerMetricsCollectorInterface,
@@ -33,6 +35,7 @@ import {
   PlayerStateActiveData,
   Progress,
   PublishPayload,
+  SubscribeAttachmentPayload,
   SubscribePayload,
   Topic,
   TopicSelection,
@@ -133,6 +136,8 @@ export class IterablePlayer implements Player {
   #providerTopicStats = new Map<string, TopicStats>();
   #providerDatatypes: RosDatatypes = new Map();
 
+  #providerAttachmentNames: string[] = [];
+
   #capabilities: string[] = [
     PlayerCapabilities.setSpeed,
     PlayerCapabilities.playbackControl,
@@ -143,6 +148,11 @@ export class IterablePlayer implements Player {
   #subscriptions: SubscribePayload[] = [];
   #allTopics: TopicSelection = new Map();
   #preloadTopics: TopicSelection = new Map();
+
+  #attachmentSubscriptions: SubscribeAttachmentPayload[] = [];
+  #allAttachmentNames: AttachmentNameSelection = new Map();
+
+  #allMetadataNames: MetadataNameSelection = new Map();
 
   #progress: Progress = {};
   #id: string = uuidv4();
@@ -172,6 +182,9 @@ export class IterablePlayer implements Player {
 
   // The iterator for reading messages during playback
   #playbackIterator?: AsyncIterator<Readonly<IteratorResult>>;
+
+  #attachments: Attachment[] = [];
+  #metadata?: Metadata[];
 
   #blockLoader?: BlockLoader;
   #blockLoadingProcess?: Promise<void>;
@@ -311,8 +324,50 @@ export class IterablePlayer implements Player {
     this.#setState("seek-backfill");
   }
 
+  public setAttachmentSubscriptions(newSubscriptions: SubscribeAttachmentPayload[]): void {
+    log.info("set attachment subscriptions", newSubscriptions);
+    this.#attachmentSubscriptions = newSubscriptions;
+    // this.#metricsCollector.setSubscriptions(newSubscriptions);
+
+    const allAttachmentNames: AttachmentNameSelection = new Map(
+      this.#attachmentSubscriptions.map((subscription) => [subscription.name, subscription]),
+    );
+    // const preloadTopics = new Map(
+    //   filterMap(this.#subscriptions, (sub) =>
+    //     sub.preloadType === "full" ? [sub.topic, sub] : undefined,
+    //   ),
+    // );
+
+    // If there are no changes to topics there's no reason to perform a "seek" to trigger loading
+    if (_.isEqual(allAttachmentNames, this.#allAttachmentNames)) {
+      return;
+    }
+
+    this.#allAttachmentNames = allAttachmentNames;
+
+    // If the player is playing, the playing state will detect any subscription changes and adjust
+    // iterators accordingly. However if we are idle or already seeking then we need to manually
+    // trigger the backfill.
+    if (
+      this.#state === "idle" ||
+      this.#state === "seek-backfill" ||
+      this.#state === "play" ||
+      this.#state === "start-play"
+    ) {
+      if (!this.#isPlaying && this.#currentTime) {
+        this.#seekTarget ??= this.#currentTime;
+        this.#untilTime = undefined;
+        this.#lastTickMillis = undefined;
+        this.#lastRangeMillis = undefined;
+
+        // Trigger a seek backfill to load any missing messages and reset the forward iterator
+        this.#setState("seek-backfill");
+      }
+    }
+  }
+
   public setSubscriptions(newSubscriptions: SubscribePayload[]): void {
-    log.debug("set subscriptions", newSubscriptions);
+    log.info("set subscriptions", newSubscriptions);
     this.#subscriptions = newSubscriptions;
     this.#metricsCollector.setSubscriptions(newSubscriptions);
 
@@ -484,6 +539,7 @@ export class IterablePlayer implements Player {
         start,
         end,
         topics,
+        attachmentNames,
         profile,
         topicStats,
         problems,
@@ -529,6 +585,10 @@ export class IterablePlayer implements Player {
 
       this.#providerTopics = Array.from(uniqueTopics.values());
       this.#providerTopicStats = topicStats;
+
+      this.#providerAttachmentNames = attachmentNames;
+
+      log.info("attachment names: ", attachmentNames);
 
       let idx = 0;
       for (const problem of problems) {
@@ -598,12 +658,20 @@ export class IterablePlayer implements Player {
     // set the playIterator to the seek time
     await this.#bufferedSource.stopProducer();
 
-    log.debug("Initializing forward iterator from", next);
+    log.info("Initializing forward iterator from", next);
     this.#playbackIterator = this.#bufferedSource.messageIterator({
       topics: this.#allTopics,
       start: next,
       consumptionType: "partial",
     });
+
+    log.info("all topics: ", this.#allTopics);
+
+    log.info("Initializing attachment iterator from", this.#start);
+    this.#attachments = await this.#iterableSource.getAttachments({
+      names: this.#allAttachmentNames,
+    });
+    log.info("all attachment names: ", this.#allAttachmentNames);
   }
 
   async #stateResetPlaybackIterator() {
@@ -641,11 +709,23 @@ export class IterablePlayer implements Player {
       throw new Error("Invariant. playbackIterator was already set");
     }
 
-    log.debug("Initializing forward iterator from", this.#start);
+    log.info("Initializing forward iterator from", this.#start);
     this.#playbackIterator = this.#bufferedSource.messageIterator({
       topics: this.#allTopics,
       start: this.#start,
       consumptionType: "partial",
+    });
+
+    log.info("all topics: ", this.#allTopics);
+
+    log.info("Initializing attachment iterator from", this.#start);
+    this.#attachments = await this.#iterableSource.getAttachments({
+      names: this.#allAttachmentNames,
+    });
+    log.info("all attachment names: ", this.#allAttachmentNames);
+
+    this.#metadata = await this.#iterableSource.getMetadata({
+      names: this.#allMetadataNames,
     });
 
     this.#lastMessageEvent = undefined;
@@ -733,6 +813,15 @@ export class IterablePlayer implements Player {
     }, 100);
 
     try {
+      // const attachments = await this.#iterableSource.getAttachments({
+      //   names: this.#allAttachmentNames,
+      //   time: this.#attachmentStartTime!,
+      // });
+
+      const metadata = await this.#iterableSource.getMetadata({
+        names: this.#allMetadataNames,
+      });
+
       this.#abort = new AbortController();
       const messages = await this.#bufferedSource.getBackfillMessages({
         topics: this.#allTopics,
@@ -747,6 +836,8 @@ export class IterablePlayer implements Player {
         return;
       }
 
+      // this.#attachments = attachments;
+      this.#metadata = metadata;
       this.#messages = messages;
       this.#currentTime = targetTime;
       this.#lastSeekEmitTime = Date.now();
@@ -797,10 +888,14 @@ export class IterablePlayer implements Player {
     const messages = this.#messages;
     this.#messages = [];
 
+    const attachments = this.#attachments;
+    this.#attachments = [];
+
     let activeData: PlayerStateActiveData | undefined;
     if (this.#start && this.#end && this.#currentTime) {
       activeData = {
         messages,
+        attachments,
         totalBytesReceived: this.#receivedBytes,
         currentTime: this.#currentTime,
         startTime: this.#start,
@@ -810,6 +905,7 @@ export class IterablePlayer implements Player {
         lastSeekTime: this.#lastSeekEmitTime,
         topics: this.#providerTopics,
         topicStats: this.#providerTopicStats,
+        attachmentNames: this.#providerAttachmentNames,
         datatypes: this.#providerDatatypes,
         publishedTopics: this.#publishedTopics,
       };

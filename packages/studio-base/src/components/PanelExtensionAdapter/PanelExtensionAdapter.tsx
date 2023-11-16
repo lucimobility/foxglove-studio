@@ -42,6 +42,7 @@ import useGlobalVariables from "@foxglove/studio-base/hooks/useGlobalVariables";
 import {
   AdvertiseOptions,
   PlayerCapabilities,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import {
@@ -115,7 +116,7 @@ function PanelExtensionAdapter(
 
   const messagePipelineContext = useMessagePipeline(selectContext);
 
-  const { playerState, pauseFrame, setSubscriptions, seekPlayback, sortedTopics } =
+  const { playerState, pauseFrame, setSubscriptions, seekPlayback, sortedTopics, setAttachmentSubscriptions } =
     messagePipelineContext;
 
   const { capabilities, profile: dataSourceProfile } = playerState;
@@ -129,6 +130,7 @@ function PanelExtensionAdapter(
   const messageConverters = useExtensionCatalog(selectInstalledMessageConverters);
 
   const [localSubscriptions, setLocalSubscriptions] = useState<Subscription[]>([]);
+  const [localAttachmentSubscriptions, setLocalAttachmentSubscriptions] = useState<string[]>([]);
 
   const [appSettings, setAppSettings] = useState(new Map<string, AppSettingValue>());
   const [subscribedAppSettings, setSubscribedAppSettings] = useState<string[]>([]);
@@ -235,6 +237,7 @@ function PanelExtensionAdapter(
       sharedPanelState,
       sortedTopics,
       subscriptions: localSubscriptions,
+      attachmentSubscriptions: localAttachmentSubscriptions,
       watchedFields,
     });
 
@@ -275,6 +278,7 @@ function PanelExtensionAdapter(
     globalVariables,
     hoverValue,
     localSubscriptions,
+    localAttachmentSubscriptions,
     messageConverters,
     messageEvents,
     panelId,
@@ -419,6 +423,32 @@ function PanelExtensionAdapter(
         setSubscriptions(panelId, subscribePayloads);
       },
 
+      subscribeAttachment: (names: ReadonlyArray<string>) => {
+        if (!isMounted()) {
+          return;
+        }
+        const subscribeAttachmentPayloads = names.map((name): SubscribeAttachmentPayload => {
+
+          return {
+            name,
+
+          };
+        });
+
+        log.info(subscribeAttachmentPayloads);
+
+        // ExtensionPanel-Facing subscription type
+        const localSubs = names.map((item): string => {
+
+          return item;
+        });
+
+        log.info("------------------setting attachment subs");
+
+        setLocalAttachmentSubscriptions(localSubs);
+        setAttachmentSubscriptions(panelId, subscribeAttachmentPayloads);
+      },
+
       advertise: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic: string, datatype: string, options) => {
           if (!isMounted()) {
@@ -546,6 +576,7 @@ function PanelExtensionAdapter(
     setHoverValue,
     setSharedPanelState,
     setSubscriptions,
+    setAttachmentSubscriptions,
     updatePanelSettingsTree,
     setMessagePathDropConfig,
   ]);
@@ -612,6 +643,7 @@ function PanelExtensionAdapter(
       isPanelInitializedRef.current = false;
       panelElement.remove();
       getMessagePipelineContext().setSubscriptions(panelId, []);
+      getMessagePipelineContext().setAttachmentSubscriptions(panelId, []);
       getMessagePipelineContext().setPublishers(panelId, []);
     };
   }, [initPanel, panelId, partialExtensionContext, getMessagePipelineContext, configTooNew]);

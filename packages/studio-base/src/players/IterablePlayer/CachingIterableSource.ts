@@ -8,12 +8,14 @@ import * as _ from "lodash-es";
 import { minIndexBy, sortedIndexByTuple } from "@foxglove/den/collection";
 import Log from "@foxglove/log";
 import { add, compare, subtract, toNanoSec } from "@foxglove/rostime";
-import { MessageEvent, Time } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata, Time } from "@foxglove/studio";
 import { TopicSelection } from "@foxglove/studio-base/players/types";
 import { Range } from "@foxglove/studio-base/util/ranges";
 
 import {
+  GetAttachmentArgs,
   GetBackfillMessagesArgs,
+  GetMetadataArgs,
   IIterableSource,
   Initalization,
   IteratorResult,
@@ -384,6 +386,22 @@ class CachingIterableSource extends EventEmitter<EventTypes> implements IIterabl
       // the end of this source
       readHead = add(sourceReadEnd, { sec: 0, nsec: 1 });
     }
+  }
+
+  public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    if (!this.#initResult) {
+      throw new Error("Invariant: uninitialized");
+    }
+
+    return await this.#source.getAttachments(args);
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
+    if (!this.#initResult) {
+      throw new Error("Invariant: uninitialized");
+    }
+
+    return await this.#source.getMetadata(args);
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

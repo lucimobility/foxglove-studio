@@ -34,6 +34,10 @@ export type ParsedMessageDefinitionsByTopic = {
 
 export type TopicSelection = Map<string, SubscribePayload>;
 
+export type AttachmentNameSelection = Map<string, SubscribeAttachmentPayload>;
+
+export type MetadataNameSelection = Map<string, SubscribePayload>;
+
 // A `Player` is a class that manages playback state. It manages subscriptions,
 // current time, which topics and datatypes are available, and so on.
 // For more details, see the types below.
@@ -50,6 +54,7 @@ export interface Player {
   // Set a new set of subscriptions/advertisers. This might trigger fetching
   // new data, which might in turn trigger a backfill of messages.
   setSubscriptions(subscriptions: Immutable<SubscribePayload[]>): void;
+  setAttachmentSubscriptions(subscriptions: Immutable<SubscribeAttachmentPayload[]>): void;
   setPublishers(publishers: AdvertiseOptions[]): void;
   // Modify a remote parameter such as a rosparam.
   setParameter(key: string, value: ParameterValue): void;
@@ -145,6 +150,8 @@ export type PlayerStateActiveData = {
   messages: readonly MessageEvent[];
   totalBytesReceived: number; // always-increasing
 
+  attachments?: readonly Attachment[];
+
   // The current playback position, which will be shown in the playback bar. This time should be
   // equal to or later than the latest `receiveTime` in `messages`. Why not just use
   // `last(messages).receiveTime`? The reason is that the data source (e.g. ROS bag) might have
@@ -180,6 +187,8 @@ export type PlayerStateActiveData = {
   // isn't represented in this list. Finally, every topic must have a `datatype` which is actually
   // present in the `datatypes` field (see below).
   topics: Topic[];
+
+  attachmentNames?: string[];
 
   // A map of topic names to topic statistics, such as message count. This should be treated as a
   // sparse list that may be missing some or all topics, depending on the active data source and its
@@ -293,6 +302,8 @@ export type SubscribePayload = {
    * The name of the topic to subscribe to.
    */
   topic: string;
+
+  attachment?: boolean;
   /**
    * If defined the source will return only these fields from messages.
    * Otherwise entire messages will be returned.
@@ -302,6 +313,21 @@ export type SubscribePayload = {
    * Defines the range of messages to subscribe to.
    */
   preloadType?: SubscriptionPreloadType;
+};
+
+/**
+ * Represents a subscription to a single attachment, for use in `setAttachmentSubscriptions`.
+ */
+export type SubscribeAttachmentPayload = {
+  /**
+   * The name of the topic to subscribe to.
+   */
+  name: string;
+  /**
+   * If defined the source will return only these fields from messages.
+   * Otherwise entire messages will be returned.
+   */
+  fields?: string[];
 };
 
 // Represents a single topic publisher, for use in `setPublishers`.
@@ -357,6 +383,7 @@ export interface PlayerMetricsCollectorInterface {
   pause(): void;
   close(): void;
   setSubscriptions(subscriptions: SubscribePayload[]): void;
+  setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void;
   recordBytesReceived(bytes: number): void;
   recordPlaybackTime(time: Time, params: { stillLoadingData: boolean }): void;
   recordUncachedRangeRequest(): void;

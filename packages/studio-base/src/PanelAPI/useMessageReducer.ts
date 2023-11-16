@@ -24,6 +24,7 @@ import useShouldNotChangeOften from "@foxglove/studio-base/hooks/useShouldNotCha
 import {
   MessageEvent,
   PlayerStateActiveData,
+  SubscribeAttachmentPayload,
   SubscribePayload,
   SubscriptionPreloadType,
 } from "@foxglove/studio-base/players/types";
@@ -35,6 +36,7 @@ type MessagesReducer<T> = (arg0: T, messages: readonly MessageEvent[]) => T;
 
 type Params<T> = {
   topics: readonly string[] | SubscribePayload[];
+  attachments: readonly string[] | SubscribeAttachmentPayload[];
   preloadType?: SubscriptionPreloadType;
 
   // Functions called when the reducers change and for each newly received message.
@@ -47,6 +49,10 @@ type Params<T> = {
 
 function selectSetSubscriptions(ctx: MessagePipelineContext) {
   return ctx.setSubscriptions;
+}
+
+function selectSetAttachmentSubscriptions(ctx: MessagePipelineContext) {
+  return ctx.setAttachmentSubscriptions;
 }
 
 export function useMessageReducer<T>(props: Params<T>): T {
@@ -83,6 +89,7 @@ export function useMessageReducer<T>(props: Params<T>): T {
   });
 
   const requestedTopics = useShallowMemo(props.topics);
+  const requestedAttachments = useShallowMemo(props.attachments);
 
   const subscriptions = useMemo<SubscribePayload[]>(() => {
     return requestedTopics.map((topic) => {
@@ -94,6 +101,16 @@ export function useMessageReducer<T>(props: Params<T>): T {
     });
   }, [preloadType, requestedTopics]);
 
+  const attachmentSubscriptions = useMemo<SubscribeAttachmentPayload[]>(() => {
+    return requestedAttachments.map((name) => {
+      if (typeof name === "string") {
+        return { name };
+      } else {
+        return name;
+      }
+    });
+  }, [requestedAttachments]);
+
   const setSubscriptions = useMessagePipeline(selectSetSubscriptions);
   useEffect(() => {
     setSubscriptions(id, subscriptions);
@@ -103,6 +120,17 @@ export function useMessageReducer<T>(props: Params<T>): T {
       setSubscriptions(id, []);
     };
   }, [id, setSubscriptions]);
+
+  const setAttachmentSubscriptions = useMessagePipeline(selectSetAttachmentSubscriptions);
+  useEffect(() => {
+    log.info(attachmentSubscriptions);
+    setAttachmentSubscriptions(id, attachmentSubscriptions);
+  }, [attachmentSubscriptions, id, setAttachmentSubscriptions]);
+  useEffect(() => {
+    return () => {
+      setAttachmentSubscriptions(id, []);
+    };
+  }, [id, setAttachmentSubscriptions]);
 
   const state = useRef<
     | Readonly<{

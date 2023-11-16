@@ -49,6 +49,7 @@ export type BuilderRenderStateInput = Immutable<{
   sharedPanelState: Record<string, unknown> | undefined;
   sortedTopics: readonly PlayerTopic[];
   subscriptions: Subscription[];
+  attachmentSubscriptions: string[];
   watchedFields: Set<string>;
 }>;
 

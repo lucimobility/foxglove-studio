@@ -15,6 +15,7 @@ import {
   Player,
   PlayerProblem,
   PlayerState,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 
@@ -68,6 +69,7 @@ type ProviderProps = {
 
 const selectRenderDone = (state: MessagePipelineInternalState) => state.renderDone;
 const selectSubscriptions = (state: MessagePipelineInternalState) => state.public.subscriptions;
+const selectAttachmentSubscriptions = (state: MessagePipelineInternalState) => state.public.attachmentSubscriptions;
 
 export function MessagePipelineProvider({
   children,
@@ -96,6 +98,18 @@ export function MessagePipelineProvider({
   const debouncedPlayerSetSubscriptions = useMemo(() => {
     return _.debounce((subs: Immutable<SubscribePayload[]>) => {
       player?.setSubscriptions(subs);
+    });
+  }, [player]);
+
+  const attachmentSubscriptions = useStore(store, selectAttachmentSubscriptions);
+
+  // Debounce the subscription updates for players. This batches multiple subscribe calls
+  // into one update for the player which avoids fetching data that will be immediately discarded.
+  //
+  // The delay of 0ms is intentional as we only want to give one timeout cycle to batch updates
+  const debouncedPlayerSetAttachmentSubscriptions = useMemo(() => {
+    return _.debounce((subs: Immutable<SubscribeAttachmentPayload[]>) => {
+      player?.setAttachmentSubscriptions(subs);
     });
   }, [player]);
 

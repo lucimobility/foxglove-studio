@@ -8,9 +8,12 @@ import shallowequal from "shallowequal";
 import { createStore, StoreApi } from "zustand";
 
 import { Condvar } from "@foxglove/den/async";
+import Log from "@foxglove/log";
 import { Immutable, MessageEvent } from "@foxglove/studio";
 import {
+  makeAttachmentSubscriptionMemoizer,
   makeSubscriptionMemoizer,
+  mergeAttachmentSubscriptions,
   mergeSubscriptions,
 } from "@foxglove/studio-base/components/MessagePipeline/subscriptions";
 import {
@@ -19,6 +22,7 @@ import {
   PlayerCapabilities,
   PlayerPresence,
   PlayerState,
+  SubscribeAttachmentPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import { assertNever } from "@foxglove/studio-base/util/assertNever";
@@ -26,6 +30,8 @@ import isDesktopApp from "@foxglove/studio-base/util/isDesktopApp";
 
 import { FramePromise } from "./pauseFrameForPromise";
 import { MessagePipelineContext } from "./types";
+
+const log = Log.getLogger(__filename);
 
 export function defaultPlayerState(): PlayerState {
   return {
@@ -51,6 +57,10 @@ export type MessagePipelineInternalState = {
   /** Preserves reference equality of subscriptions to minimize player subscription churn. */
   subscriptionMemoizer: (sub: SubscribePayload) => SubscribePayload;
   subscriptionsById: Map<string, Immutable<SubscribePayload[]>>;
+
+  attachmentSubscriptionMemoizer: (sub: SubscribeAttachmentPayload) => SubscribeAttachmentPayload;
+  attachmentSubscriptionsById: Map<string, Immutable<SubscribeAttachmentPayload[]>>;
+
   publishersById: { [key: string]: AdvertiseOptions[] };
   allPublishers: AdvertiseOptions[];
   /**
@@ -76,6 +86,11 @@ type UpdateSubscriberAction = {
   id: string;
   payloads: Immutable<SubscribePayload[]>;
 };
+type UpdateAttachmentSubscriberAction = {
+  type: "update-attachment-subscriber";
+  id: string;
+  payloads: Immutable<SubscribeAttachmentPayload[]>;
+};
 type UpdatePlayerStateAction = {
   type: "update-player-state";
   playerState: PlayerState;
@@ -85,6 +100,7 @@ type UpdatePlayerStateAction = {
 export type MessagePipelineStateAction =
   | UpdateSubscriberAction
   | UpdatePlayerStateAction
+  | UpdateAttachmentSubscriberAction
   | { type: "set-publishers"; id: string; payloads: AdvertiseOptions[] };
 
 export function createMessagePipelineStore({
@@ -100,8 +116,11 @@ export function createMessagePipelineStore({
     allPublishers: [],
     subscriptionMemoizer: makeSubscriptionMemoizer(),
     subscriptionsById: new Map(),
+    attachmentSubscriptionMemoizer: makeAttachmentSubscriptionMemoizer(),
+    attachmentSubscriptionsById: new Map(),
     subscriberIdsByTopic: new Map(),
     newTopicsBySubscriberId: new Map(),
+    newAttachmentsBySubscriberId: new Map(),
     lastMessageEventByTopic: new Map(),
     lastCapabilities: [],
 
@@ -125,7 +144,9 @@ export function createMessagePipelineStore({
           playerState: defaultPlayerState(),
           messageEventsBySubscriberId: new Map(),
           subscriptions: [],
+          attachmentSubscriptions: [],
           sortedTopics: [],
+          attachmentNames: [],
           datatypes: new Map(),
           startPlayback: undefined,
           playUntil: undefined,
@@ -140,10 +161,17 @@ export function createMessagePipelineStore({
       playerState: defaultPlayerState(),
       messageEventsBySubscriberId: new Map(),
       subscriptions: [],
+      attachmentSubscriptions: [],
       sortedTopics: [],
+      attachmentNames: [],
       datatypes: new Map(),
       setSubscriptions(id, payloads) {
+        log.info("update-subscriber", payloads);
         get().dispatch({ type: "update-subscriber", id, payloads });
+      },
+      setAttachmentSubscriptions(id, payloads) {
+        log.info("update-attachment-subscriber", payloads);
+        get().dispatch({ type: "update-attachment-subscriber", id, payloads });
       },
       setPublishers(id, payloads) {
         get().dispatch({ type: "set-publishers", id, payloads });
@@ -276,6 +304,74 @@ function updateSubscriberAction(
     },
   };
 }
+// Update state with a subscriber. Any new topics for the subscriber are tracked in newTopicsBySubscriberId
+// to receive the last message on their newly subscribed topics.
+function updateAttachmentSubscriberAction(
+  prevState: MessagePipelineInternalState,
+  action: UpdateAttachmentSubscriberAction,
+): MessagePipelineInternalState {
+  const previousSubscriptionsById = prevState.attachmentSubscriptionsById;
+  const newTopicsBySubscriberId = new Map(prevState.newAttachmentsBySubscriberId);
+
+  log.info(action);
+
+  // Record any _new_ topics for this subscriber into newTopicsBySubscriberId
+  const newTopics = newTopicsBySubscriberId.get(action.id);
+  if (!newTopics) {
+    const actionTopics = action.payloads.map((sub) => sub.name);
+    newTopicsBySubscriberId.set(action.id, new Set(actionTopics));
+  } else {
+    const previousSubscription = previousSubscriptionsById.get(action.id);
+    const prevTopics = new Set(previousSubscription?.map((sub) => sub.name) ?? []);
+    for (const { name: newName } of action.payloads) {
+      if (!prevTopics.has(newName)) {
+        newTopics.add(newName);
+      }
+    }
+  }
+
+  const newSubscriptionsById = new Map(previousSubscriptionsById);
+
+  if (action.payloads.length === 0) {
+    // When a subscription id has no topics we removed it from our map
+    newSubscriptionsById.delete(action.id);
+  } else {
+    newSubscriptionsById.set(action.id, action.payloads);
+  }
+
+  const subscriberIdsByTopic = new Map<string, string[]>();
+
+  // make a map of topics to subscriber ids
+  for (const [id, subs] of newSubscriptionsById) {
+    for (const subscription of subs) {
+      const name = subscription.name;
+
+      const ids = subscriberIdsByTopic.get(name) ?? [];
+      // If the id is already present in the array for the topic then we should not add it again.
+      // If we add it again it will be given frame messages again when bucketing incoming messages
+      // by subscriber id.
+      if (!ids.includes(id)) {
+        ids.push(id);
+      }
+      subscriberIdsByTopic.set(name, ids);
+    }
+  }
+
+  const subscriptions = mergeAttachmentSubscriptions(
+    Array.from(newSubscriptionsById.values()).flat(),
+  );
+
+  return {
+    ...prevState,
+    attachmentSubscriptionsById: newSubscriptionsById,
+    subscriberIdsByTopic,
+    newTopicsBySubscriberId,
+    public: {
+      ...prevState.public,
+      attachmentSubscriptions: subscriptions,
+    },
+  };
+}
 // Update with a player state.
 // Put messages from the player state into messagesBySubscriberId. Any new topic subscribers, receive
 // the last message on a topic.
@@ -357,6 +453,14 @@ function updatePlayerStateAction(
       ? [...topics].sort((a, b) => a.name.localeCompare(b.name))
       : [];
   }
+
+  const attachmentNames = action.playerState.activeData?.attachmentNames;
+  if (attachmentNames !== prevState.public.playerState.activeData?.attachmentNames) {
+    newPublicState.attachmentNames = attachmentNames
+      ? [...attachmentNames].sort((a, b) => a.localeCompare(b))
+      : [];
+  }
+
   if (
     action.playerState.activeData?.datatypes !== prevState.public.playerState.activeData?.datatypes
   ) {
@@ -402,6 +506,8 @@ export function reducer(
       return updatePlayerStateAction(prevState, action);
     case "update-subscriber":
       return updateSubscriberAction(prevState, action);
+    case "update-attachment-subscriber":
+      return updateAttachmentSubscriberAction(prevState, action);
 
     case "set-publishers": {
       const newPublishersById = { ...prevState.publishersById, [action.id]: action.payloads };

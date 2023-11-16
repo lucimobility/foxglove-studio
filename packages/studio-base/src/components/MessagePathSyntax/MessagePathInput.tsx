@@ -16,6 +16,7 @@ import * as _ from "lodash-es";
 import { CSSProperties, useCallback, useMemo } from "react";
 import { makeStyles } from "tss-react/mui";
 
+import Logger from "@foxglove/log";
 import { MessageDefinitionField } from "@foxglove/message-definition";
 import { Immutable } from "@foxglove/studio";
 import * as PanelAPI from "@foxglove/studio-base/PanelAPI";
@@ -35,6 +36,8 @@ import {
   StructureTraversalResult,
 } from "./messagePathsForDatatype";
 import parseRosPath, { quoteFieldNameIfNeeded, quoteTopicNameIfNeeded } from "./parseRosPath";
+
+const log = Logger.getLogger(__filename);
 
 // To show an input field with an autocomplete so the user can enter message paths, use:
 //
@@ -182,6 +185,7 @@ type MessagePathInputBaseProps = {
   readOnly?: boolean;
   prioritizedDatatype?: string;
   variant?: TextFieldProps["variant"];
+  attachment?: boolean;
 };
 
 const useStyles = makeStyles()({
@@ -192,7 +196,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
   props: MessagePathInputBaseProps,
 ) {
   const { globalVariables, setGlobalVariables } = useGlobalVariables();
-  const { datatypes, topics } = PanelAPI.useDataSourceInfo();
+  const { datatypes, topics, attachmentNames } = PanelAPI.useDataSourceInfo();
 
   const {
     supportsMathModifiers,
@@ -205,9 +209,12 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
     inputStyle,
     disableAutocomplete = false,
     variant = "standard",
+    attachment,
   } = props;
   const { classes } = useStyles();
   const topicFields = useMemo(() => getFieldPaths(topics, datatypes), [datatypes, topics]);
+
+  log.info("attachment names inside message path input file: ", attachmentNames);
 
   const onChangeProp = props.onChange;
   const onChange = useCallback(
@@ -247,7 +254,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
       // add a "." so the user can keep typing to autocomplete the message path.
       const messageIsValidType = validTypes == undefined || validTypes.includes("message");
       const keepGoingAfterTopicName =
-        autocompleteType === "topicName" && !messageIsValidType && !isSimpleField;
+        autocompleteType === "topicName" && !(attachment ?? false) && !messageIsValidType && !isSimpleField;
       const value = keepGoingAfterTopicName ? rawValue + "." : rawValue;
 
       onChangeProp(completeStart + value + completeEnd, props.index);
@@ -265,7 +272,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
         autocomplete.blur();
       }
     },
-    [onChangeProp, path, props.index, topicFields, validTypes],
+    [attachment, onChangeProp, path, props.index, topicFields, validTypes],
   );
 
   const rosPath = useMemo(() => parseRosPath(path), [path]);
@@ -352,6 +359,14 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
         autocompleteFilterText: "",
         autocompleteRange: { start: 0, end: Infinity },
       };
+    } else if (attachment ?? false) {
+      // If the path is empty, return topic names only to show the full list of topics. Otherwise,
+      // use the full set of topic names and field paths to autocomplete
+      return {
+        autocompleteItems: attachmentNames,
+        autocompleteFilterText: path,
+        autocompleteRange: { start: 0, end: Infinity },
+      };
     } else if (autocompleteType === "topicName") {
       // If the path is empty, return topic names only to show the full list of topics. Otherwise,
       // use the full set of topic names and field paths to autocomplete
@@ -405,13 +420,13 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
             structure == undefined
               ? []
               : messagePathsForStructure(structure, {
-                  validTypes,
-                  noMultiSlices,
-                  messagePath: rosPath.messagePath,
-                }).filter(
-                  // .header.seq is pretty useless but shows up everryyywhere.
-                  (msgPath) => msgPath !== "" && !msgPath.endsWith(".header.seq"),
-                ),
+                validTypes,
+                noMultiSlices,
+                messagePath: rosPath.messagePath,
+              }).filter(
+                // .header.seq is pretty useless but shows up everryyywhere.
+                (msgPath) => msgPath !== "" && !msgPath.endsWith(".header.seq"),
+              ),
 
           autocompleteRange: {
             start: rosPath.topicNameRepr.length + initialFilterLength,
@@ -448,10 +463,12 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
     };
   }, [
     disableAutocomplete,
+    attachment,
     autocompleteType,
     topic,
     rosPath,
     invalidGlobalVariablesVariable,
+    attachmentNames,
     path,
     topicNamesAndFieldsAutocompleteItems,
     topicNamesAutocompleteItems,
