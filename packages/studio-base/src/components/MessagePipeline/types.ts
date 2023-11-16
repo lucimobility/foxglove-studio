@@ -3,12 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Time } from "@foxglove/rostime";
-import { Immutable, MessageEvent, ParameterValue } from "@foxglove/studio";
+import { Attachment, Immutable, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
 import { BuiltinPanelExtensionContext } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import {
   AdvertiseOptions,
   PlayerState,
   PublishPayload,
+  SubscribeAttachmentPayload,
+  SubscribeMetadataPayload,
   SubscribePayload,
   Topic,
 } from "@foxglove/studio-base/players/types";
@@ -18,10 +20,24 @@ type ResumeFrame = () => void;
 export type MessagePipelineContext = Immutable<{
   playerState: PlayerState;
   sortedTopics: Topic[];
+  attachmentNames: string[];
+  metadataNames: string[];
   datatypes: RosDatatypes;
   subscriptions: SubscribePayload[];
+  attachmentSubscriptions: SubscribeAttachmentPayload[];
+  metadataSubscriptions: SubscribeMetadataPayload[];
   messageEventsBySubscriberId: Map<string, MessageEvent[]>;
+  attachmentsBySubscriberId: Map<string, Attachment[]>;
+  metadataBySubscriberId: Map<string, Metadata[]>;
   setSubscriptions: (id: string, subscriptionsForId: Immutable<SubscribePayload[]>) => void;
+  setAttachmentSubscriptions: (
+    id: string,
+    subscriptionsForId: Immutable<SubscribeAttachmentPayload[]>,
+  ) => void;
+  setMetadataSubscriptions: (
+    id: string,
+    subscriptionsForId: Immutable<SubscribeMetadataPayload[]>,
+  ) => void;
   setPublishers: (id: string, publishersForId: AdvertiseOptions[]) => void;
   setParameter: (key: string, value: ParameterValue) => void;
   publish: (request: PublishPayload) => void;

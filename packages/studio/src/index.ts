@@ -127,6 +127,23 @@ export type MessageEvent<T = unknown> = {
   originalMessageEvent?: MessageEvent;
 };
 
+export type Attachment<T = Uint8Array> = {
+  name: string;
+
+  data: T;
+
+  mediaType: string;
+
+  createTime?: bigint;
+  logTime?: bigint;
+};
+
+export type Metadata = {
+  name: string;
+
+  metadata: ReadonlyMap<string, string>;
+};
+
 export interface LayoutActions {
   /** Open a new panel or update an existing panel in the layout.  */
   addPanel(params: {
@@ -331,6 +348,30 @@ export type PanelExtensionContext = {
    * Calling subscribe with an empty array is analagous to unsubscribeAll.
    */
   subscribe(subscriptions: Subscription[]): void;
+
+  /**
+   * Subscribe to an array of topic names.
+   *
+   * Subscribe will update the current subscriptions to the list of topic names. Passing an empty
+   * array will unsubscribe from all topics.
+   *
+   * Calling subscribe with an empty array of topics is analagous to unsubscribeAll.
+   *
+   * @deprecated Use `subscribe` with an array of Subscription objects instead.
+   */
+  subscribeAttachment(names: string[]): void;
+
+  /**
+   * Subscribe to an array of topic names.
+   *
+   * Subscribe will update the current subscriptions to the list of topic names. Passing an empty
+   * array will unsubscribe from all topics.
+   *
+   * Calling subscribe with an empty array of topics is analagous to unsubscribeAll.
+   *
+   * @deprecated Use `subscribe` with an array of Subscription objects instead.
+   */
+  subscribeMetadata(names: string[]): void;
 
   /**
    * Unsubscribe from all topics.
@@ -554,6 +595,20 @@ export type SettingsTreeFieldValue =
   | { input: "gradient"; value?: [string, string] }
   | {
       input: "messagepath";
+      value?: string;
+      validTypes?: string[];
+      /** True if the input should allow math modifiers like @abs. */
+      supportsMathModifiers?: boolean;
+    }
+  | {
+      input: "attachment";
+      value?: string;
+      validTypes?: string[];
+      /** True if the input should allow math modifiers like @abs. */
+      supportsMathModifiers?: boolean;
+    }
+  | {
+      input: "metadata";
       value?: string;
       validTypes?: string[];
       /** True if the input should allow math modifiers like @abs. */

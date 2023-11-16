@@ -15,6 +15,7 @@ import {
 import { StoreApi, useStore } from "zustand";
 
 import { useGuaranteedContext } from "@foxglove/hooks";
+import Log from "@foxglove/log";
 import { Immutable } from "@foxglove/studio";
 import { AppSetting } from "@foxglove/studio-base/AppSetting";
 import CurrentLayoutContext, {
@@ -26,6 +27,8 @@ import {
   Player,
   PlayerProblem,
   PlayerState,
+  SubscribeAttachmentPayload,
+  SubscribeMetadataPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 
@@ -37,6 +40,8 @@ import {
   defaultPlayerState,
 } from "./store";
 import { MessagePipelineContext } from "./types";
+
+const log = Log.getLogger(__filename);
 
 export type { MessagePipelineContext };
 
@@ -79,6 +84,8 @@ type ProviderProps = {
 
 const selectRenderDone = (state: MessagePipelineInternalState) => state.renderDone;
 const selectSubscriptions = (state: MessagePipelineInternalState) => state.public.subscriptions;
+const selectAttachmentSubscriptions = (state: MessagePipelineInternalState) => state.public.attachmentSubscriptions;
+const selectMetadataSubscriptions = (state: MessagePipelineInternalState) => state.public.metadataSubscriptions;
 
 export function MessagePipelineProvider({ children, player }: ProviderProps): React.ReactElement {
   const promisesToWaitForRef = useRef<FramePromise[]>([]);
@@ -106,6 +113,31 @@ export function MessagePipelineProvider({ children, player }: ProviderProps): Re
     });
   }, [player]);
 
+  const attachmentSubscriptions = useStore(store, selectAttachmentSubscriptions);
+
+  // Debounce the subscription updates for players. This batches multiple subscribe calls
+  // into one update for the player which avoids fetching data that will be immediately discarded.
+  //
+  // The delay of 0ms is intentional as we only want to give one timeout cycle to batch updates
+  const debouncedPlayerSetAttachmentSubscriptions = useMemo(() => {
+    return _.debounce((subs: Immutable<SubscribeAttachmentPayload[]>) => {
+      log.info("player: ", player);
+      player?.setAttachmentSubscriptions(subs);
+    });
+  }, [player]);
+
+  const metadataSubscriptions = useStore(store, selectMetadataSubscriptions);
+
+  // Debounce the subscription updates for players. This batches multiple subscribe calls
+  // into one update for the player which avoids fetching data that will be immediately discarded.
+  //
+  // The delay of 0ms is intentional as we only want to give one timeout cycle to batch updates
+  const debouncedPlayerSetMetadataSubscriptions = useMemo(() => {
+    return _.debounce((subs: Immutable<SubscribeMetadataPayload[]>) => {
+      player?.setMetadataSubscriptions(subs);
+    });
+  }, [player]);
+
   // when unmounting or changing the debounce function cancel any pending debounce
   useEffect(() => {
     return () => {
@@ -116,6 +148,30 @@ export function MessagePipelineProvider({ children, player }: ProviderProps): Re
   useEffect(
     () => debouncedPlayerSetSubscriptions(subscriptions),
     [debouncedPlayerSetSubscriptions, subscriptions],
+  );
+
+  // when unmounting or changing the debounce function cancel any pending debounce
+  useEffect(() => {
+    return () => {
+      debouncedPlayerSetAttachmentSubscriptions.cancel();
+    };
+  }, [debouncedPlayerSetAttachmentSubscriptions]);
+
+  useEffect(
+    () => debouncedPlayerSetAttachmentSubscriptions(attachmentSubscriptions),
+    [debouncedPlayerSetAttachmentSubscriptions, attachmentSubscriptions],
+  );
+
+  // when unmounting or changing the debounce function cancel any pending debounce
+  useEffect(() => {
+    return () => {
+      debouncedPlayerSetMetadataSubscriptions.cancel();
+    };
+  }, [debouncedPlayerSetMetadataSubscriptions]);
+
+  useEffect(
+    () => debouncedPlayerSetMetadataSubscriptions(metadataSubscriptions),
+    [debouncedPlayerSetMetadataSubscriptions, metadataSubscriptions],
   );
 
   // Slow down the message pipeline framerate to the given FPS if it is set to less than 60

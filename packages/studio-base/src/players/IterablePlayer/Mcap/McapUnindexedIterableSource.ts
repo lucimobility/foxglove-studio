@@ -17,9 +17,11 @@ import {
   toRFC3339String,
   compare,
 } from "@foxglove/rostime";
-import { MessageEvent } from "@foxglove/studio";
+import { Attachment, MessageEvent, Metadata } from "@foxglove/studio";
 import {
+  GetAttachmentArgs,
   GetBackfillMessagesArgs,
+  GetMetadataArgs,
   IIterableSource,
   Initalization,
   IteratorResult,
@@ -59,6 +61,7 @@ export class McapUnindexedIterableSource implements IIterableSource {
 
     let messageCount = 0;
     const messagesByChannel = new Map<number, MessageEvent[]>();
+    const attachments: Attachment[] = [];
     const schemasById = new Map<number, McapTypes.TypedMcapRecords["Schema"]>();
     const channelInfoById = new Map<
       number,
@@ -174,6 +177,25 @@ export class McapUnindexedIterableSource implements IIterableSource {
           });
           break;
         }
+
+        case "Attachment": {
+          attachments.push({
+            name: record.name,
+            logTime: fromNanoSec(record.logTime),
+            // createTime: fromNanoSec(record.createTime),
+            mediaType: record.mediaType,
+            data: record.data,
+          });
+          break;
+        }
+
+        case "Metadata": {
+          metadata.push({
+            name: record.name,
+            metadata: record.metadata,
+          });
+          break;
+        }
       }
     }
 
@@ -248,6 +270,8 @@ export class McapUnindexedIterableSource implements IIterableSource {
       start: this.#start,
       end: this.#end,
       topics,
+      attachments,
+      metadata,
       datatypes,
       profile,
       problems,
@@ -293,6 +317,40 @@ export class McapUnindexedIterableSource implements IIterableSource {
     resultMessages.sort((a, b) => compare(a.msgEvent.receiveTime, b.msgEvent.receiveTime));
 
     yield* resultMessages;
+  }
+
+  public async getAttachments(args: GetAttachmentArgs): Promise<Attachment[]> {
+    if (!this.#msgEventsByChannel) {
+      throw new Error("initialization not completed");
+    }
+
+    const needAttachmentNames = args.names;
+    const attachmentByName = new Map<string, Attachment>();
+    for (const [, msgEvents] of this.#msgEventsByChannel) {
+      for (const msgEvent of msgEvents) {
+        if (needAttachmentNames.has(msgEvent.topic)) {
+          attachmentByName.set(msgEvent.topic, msgEvent);
+        }
+      }
+    }
+    return [...attachmentByName.values()];
+  }
+
+  public async getMetadata(args: GetMetadataArgs): Promise<Metadata[]> {
+    if (!this.#msgEventsByChannel) {
+      throw new Error("initialization not completed");
+    }
+
+    const needMetadataNames = args.names;
+    const metadataByName = new Map<string, Metadata>();
+    for (const [, msgEvents] of this.#msgEventsByChannel) {
+      for (const msgEvent of msgEvents) {
+        if (needMetadataNames.has(msgEvent.topic)) {
+          metadataByName.set(msgEvent.topic, msgEvent);
+        }
+      }
+    }
+    return [...metadataByName.values()];
   }
 
   public async getBackfillMessages(args: GetBackfillMessagesArgs): Promise<MessageEvent[]> {

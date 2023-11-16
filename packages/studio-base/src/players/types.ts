@@ -13,7 +13,7 @@
 
 import { MessageDefinition } from "@foxglove/message-definition";
 import { Time } from "@foxglove/rostime";
-import type { MessageEvent, ParameterValue } from "@foxglove/studio";
+import type { Attachment, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
 import { Immutable } from "@foxglove/studio";
 import { Asset } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import { GlobalVariables } from "@foxglove/studio-base/hooks/useGlobalVariables";
@@ -34,6 +34,10 @@ export type ParsedMessageDefinitionsByTopic = {
 
 export type TopicSelection = Map<string, SubscribePayload>;
 
+export type AttachmentNameSelection = Map<string, SubscribeAttachmentPayload>;
+
+export type MetadataNameSelection = Map<string, SubscribeMetadataPayload>;
+
 // A `Player` is a class that manages playback state. It manages subscriptions,
 // current time, which topics and datatypes are available, and so on.
 // For more details, see the types below.
@@ -50,6 +54,8 @@ export interface Player {
   // Set a new set of subscriptions/advertisers. This might trigger fetching
   // new data, which might in turn trigger a backfill of messages.
   setSubscriptions(subscriptions: Immutable<SubscribePayload[]>): void;
+  setAttachmentSubscriptions(subscriptions: Immutable<SubscribeAttachmentPayload[]>): void;
+  setMetadataSubscriptions(subscriptions: Immutable<SubscribeMetadataPayload[]>): void;
   setPublishers(publishers: AdvertiseOptions[]): void;
   // Modify a remote parameter such as a rosparam.
   setParameter(key: string, value: ParameterValue): void;
@@ -140,6 +146,9 @@ export type PlayerStateActiveData = {
   messages: readonly MessageEvent[];
   totalBytesReceived: number; // always-increasing
 
+  attachments?: readonly Attachment[];
+  metadata?: readonly Metadata[];
+
   // The current playback position, which will be shown in the playback bar. This time should be
   // equal to or later than the latest `receiveTime` in `messages`. Why not just use
   // `last(messages).receiveTime`? The reason is that the data source (e.g. ROS bag) might have
@@ -175,6 +184,9 @@ export type PlayerStateActiveData = {
   // isn't represented in this list. Finally, every topic must have a `datatype` which is actually
   // present in the `datatypes` field (see below).
   topics: Topic[];
+
+  attachmentNames?: string[];
+  metadataNames?: string[];
 
   // A map of topic names to topic statistics, such as message count. This should be treated as a
   // sparse list that may be missing some or all topics, depending on the active data source and its
@@ -302,6 +314,33 @@ export type SubscribePayload = {
   preloadType?: SubscriptionPreloadType;
 };
 
+/**
+ * Represents a subscription to a single attachment, for use in `setAttachmentSubscriptions`.
+ */
+export type SubscribeAttachmentPayload = {
+  /**
+   * The name of the topic to subscribe to.
+   */
+  name: string;
+  /**
+   * If defined the source will return only these fields from messages.
+   * Otherwise entire messages will be returned.
+   */
+  fields?: string[];
+};
+
+export type SubscribeMetadataPayload = {
+  /**
+   * The name of the topic to subscribe to.
+   */
+  name: string;
+  /**
+   * If defined the source will return only these fields from messages.
+   * Otherwise entire messages will be returned.
+   */
+  fields?: string[];
+};
+
 // Represents a single topic publisher, for use in `setPublishers`.
 export type AdvertiseOptions = {
   /** The topic name */
@@ -352,6 +391,8 @@ export interface PlayerMetricsCollectorInterface {
   pause(): void;
   close(): void;
   setSubscriptions(subscriptions: SubscribePayload[]): void;
+  setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void;
+  setMetadataSubscriptions(subscriptions: SubscribeMetadataPayload[]): void;
   recordBytesReceived(bytes: number): void;
   recordPlaybackTime(time: Time, params: { stillLoadingData: boolean }): void;
   recordUncachedRangeRequest(): void;

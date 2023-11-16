@@ -29,6 +29,14 @@ function selectTopics(ctx: MessagePipelineContext) {
   return ctx.sortedTopics;
 }
 
+function selectAttachmentNames(ctx: MessagePipelineContext) {
+  return ctx.attachmentNames;
+}
+
+function selectMetadataNames(ctx: MessagePipelineContext) {
+  return ctx.metadataNames;
+}
+
 function selectStartTime(ctx: MessagePipelineContext) {
   return ctx.playerState.activeData?.startTime;
 }
@@ -45,6 +53,8 @@ function selectPlayerId(ctx: MessagePipelineContext) {
 // This is not expected to change often, usually when changing data sources.
 export type DataSourceInfo = {
   topics: readonly Topic[];
+  attachmentNames: readonly string[];
+  metadataNames: readonly string[];
   datatypes: RosDatatypes;
   capabilities: string[];
   startTime?: Time; // Only `startTime`, since `endTime` can change rapidly when connected to a live system.
@@ -60,6 +70,8 @@ export type DataSourceInfo = {
 export function useDataSourceInfo(): Immutable<DataSourceInfo> {
   const datatypes = useMessagePipeline(selectDatatypes);
   const topics = useMessagePipeline(selectTopics);
+  const attachmentNames = useMessagePipeline(selectAttachmentNames);
+  const metadataNames = useMessagePipeline(selectMetadataNames);
   const startTime = useMessagePipeline(selectStartTime);
   const capabilities = useMessagePipeline(selectCapabilities);
   const playerId = useMessagePipeline(selectPlayerId);
@@ -68,10 +80,12 @@ export function useDataSourceInfo(): Immutable<DataSourceInfo> {
   return useMemo(() => {
     return {
       topics,
+      attachmentNames,
+      metadataNames,
       datatypes,
       capabilities,
       startTime,
       playerId,
     };
-  }, [capabilities, datatypes, playerId, startTime, topics]);
+  }, [attachmentNames, capabilities, datatypes, metadataNames, playerId, startTime, topics]);
 }

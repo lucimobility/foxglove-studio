@@ -42,6 +42,8 @@ import useGlobalVariables from "@foxglove/studio-base/hooks/useGlobalVariables";
 import {
   AdvertiseOptions,
   PlayerCapabilities,
+  SubscribeAttachmentPayload,
+  SubscribeMetadataPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import {
@@ -74,8 +76,8 @@ function isVersionedPanelConfig(config: unknown): config is VersionedPanelConfig
 type PanelExtensionAdapterProps = {
   /** function that initializes the panel extension */
   initPanel:
-    | ExtensionPanelRegistration["initPanel"]
-    | ((context: BuiltinPanelExtensionContext) => void);
+  | ExtensionPanelRegistration["initPanel"]
+  | ((context: BuiltinPanelExtensionContext) => void);
   /**
    * If defined, the highest supported version of config the panel supports.
    * Used to prevent older implementations of a panel from trying to access
@@ -115,7 +117,7 @@ function PanelExtensionAdapter(
 
   const messagePipelineContext = useMessagePipeline(selectContext);
 
-  const { playerState, pauseFrame, setSubscriptions, seekPlayback, sortedTopics } =
+  const { playerState, pauseFrame, setSubscriptions, seekPlayback, sortedTopics, setAttachmentSubscriptions, setMetadataSubscriptions } =
     messagePipelineContext;
 
   const { capabilities, profile: dataSourceProfile } = playerState;
@@ -129,6 +131,8 @@ function PanelExtensionAdapter(
   const messageConverters = useExtensionCatalog(selectInstalledMessageConverters);
 
   const [localSubscriptions, setLocalSubscriptions] = useState<Subscription[]>([]);
+  const [localAttachmentSubscriptions, setLocalAttachmentSubscriptions] = useState<string[]>([]);
+  const [localMetadataSubscriptions, setLocalMetadataSubscriptions] = useState<string[]>([]);
 
   const [appSettings, setAppSettings] = useState(new Map<string, AppSettingValue>());
   const [subscribedAppSettings, setSubscribedAppSettings] = useState<string[]>([]);
@@ -205,6 +209,16 @@ function PanelExtensionAdapter(
     [messagePipelineContext.messageEventsBySubscriberId, panelId],
   );
 
+  const attachments = useMemo(
+    () => messagePipelineContext.attachmentsBySubscriberId.get(panelId),
+    [messagePipelineContext.attachmentsBySubscriberId, panelId],
+  );
+
+  const metadata = useMemo(
+    () => messagePipelineContext.metadataBySubscriberId.get(panelId),
+    [messagePipelineContext.metadataBySubscriberId, panelId],
+  );
+
   // The rendering ref is set when we've begin rendering the frame (calling the panel's render
   // function)
   //
@@ -235,6 +249,8 @@ function PanelExtensionAdapter(
       sharedPanelState,
       sortedTopics,
       subscriptions: localSubscriptions,
+      attachmentSubscriptions: localAttachmentSubscriptions,
+      metadataSubscriptions: localMetadataSubscriptions,
       watchedFields,
     });
 
@@ -268,23 +284,7 @@ function PanelExtensionAdapter(
     } catch (err) {
       setError(err);
     }
-  }, [
-    appSettings,
-    buildRenderState,
-    colorScheme,
-    globalVariables,
-    hoverValue,
-    localSubscriptions,
-    messageConverters,
-    messageEvents,
-    panelId,
-    pauseFrame,
-    playerState,
-    renderFn,
-    sharedPanelState,
-    sortedTopics,
-    watchedFields,
-  ]);
+  }, [appSettings, buildRenderState, colorScheme, globalVariables, hoverValue, localSubscriptions, localAttachmentSubscriptions, messageConverters, messageEvents, panelId, pauseFrame, playerState, renderFn, sharedPanelState, sortedTopics, watchedFields, localMetadataSubscriptions]);
 
   const updatePanelSettingsTree = usePanelSettingsTreeUpdate();
 
@@ -323,12 +323,12 @@ function PanelExtensionAdapter(
 
       seekPlayback: seekPlayback
         ? (stamp: number | Time) => {
-            if (!isMounted()) {
-              return;
-            }
-            const seekTarget = typeof stamp === "object" ? stamp : fromSec(stamp);
-            seekPlayback(seekTarget);
+          if (!isMounted()) {
+            return;
           }
+          const seekTarget = typeof stamp === "object" ? stamp : fromSec(stamp);
+          seekPlayback(seekTarget);
+        }
         : undefined,
 
       dataSourceProfile,
@@ -419,57 +419,109 @@ function PanelExtensionAdapter(
         setSubscriptions(panelId, subscribePayloads);
       },
 
+      subscribeAttachment: (names: ReadonlyArray<string>) => {
+        if (!isMounted()) {
+          return;
+        }
+        const subscribeAttachmentPayloads = names.map((name): SubscribeAttachmentPayload => {
+
+          return {
+            name,
+
+          };
+        });
+
+        log.info(subscribeAttachmentPayloads);
+
+        // ExtensionPanel-Facing subscription type
+        const localSubs = names.map((item): string => {
+
+          return item;
+        });
+
+        log.info("------------------setting attachment subs");
+
+        setLocalAttachmentSubscriptions(localSubs);
+        setAttachmentSubscriptions(panelId, subscribeAttachmentPayloads);
+      },
+
+      subscribeMetadata: (names: ReadonlyArray<string>) => {
+        if (!isMounted()) {
+          return;
+        }
+        const subscribeMetadataPayloads = names.map((name): SubscribeMetadataPayload => {
+
+          return {
+            name,
+
+          };
+        });
+
+        log.info(subscribeMetadataPayloads);
+
+        // ExtensionPanel-Facing subscription type
+        const localSubs = names.map((item): string => {
+
+          return item;
+        });
+
+        log.info("------------------setting metadata subs");
+
+        setLocalMetadataSubscriptions(localSubs);
+        setMetadataSubscriptions(panelId, subscribeMetadataPayloads);
+      },
+
       advertise: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic: string, datatype: string, options) => {
-            if (!isMounted()) {
-              return;
-            }
-            const payload: AdvertiseOptions = {
-              topic,
-              schemaName: datatype,
-              options,
-            };
-            advertisementsRef.current.set(topic, payload);
-
-            getMessagePipelineContext().setPublishers(
-              panelId,
-              Array.from(advertisementsRef.current.values()),
-            );
+          if (!isMounted()) {
+            return;
           }
+          const payload: AdvertiseOptions = {
+            topic,
+            schemaName: datatype,
+            options,
+          };
+          advertisementsRef.current.set(topic, payload);
+
+          getMessagePipelineContext().setPublishers(
+            panelId,
+            Array.from(advertisementsRef.current.values()),
+          );
+        }
         : undefined,
 
       unadvertise: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic: string) => {
-            if (!isMounted()) {
-              return;
-            }
-            advertisementsRef.current.delete(topic);
-            getMessagePipelineContext().setPublishers(
-              panelId,
-              Array.from(advertisementsRef.current.values()),
-            );
+          if (!isMounted()) {
+            return;
           }
+          advertisementsRef.current.delete(topic);
+          getMessagePipelineContext().setPublishers(
+            panelId,
+            Array.from(advertisementsRef.current.values()),
+          );
+        }
         : undefined,
 
       publish: capabilities.includes(PlayerCapabilities.advertise)
         ? (topic, message) => {
-            if (!isMounted()) {
-              return;
-            }
-            getMessagePipelineContext().publish({
-              topic,
-              msg: message as Record<string, unknown>,
-            });
+          if (!isMounted()) {
+            return;
           }
+          getMessagePipelineContext().publish({
+            topic,
+            msg: message as Record<string, unknown>,
+          });
+        }
         : undefined,
 
       callService: capabilities.includes(PlayerCapabilities.callServices)
         ? async (service, request): Promise<unknown> => {
-            if (!isMounted()) {
-              throw new Error("Service call after panel was unmounted");
-            }
-            return await getMessagePipelineContext().callService(service, request);
+          if (!isMounted()) {
+            throw new Error("Service call after panel was unmounted");
           }
+          return await getMessagePipelineContext().callService(service, request);
+        }
         : undefined,
 
       unstable_fetchAsset: async (uri, options) => {
@@ -512,25 +564,7 @@ function PanelExtensionAdapter(
         setMessagePathDropConfig(dropConfig);
       },
     };
-  }, [
-    capabilities,
-    clearHoverValue,
-    dataSourceProfile,
-    getMessagePipelineContext,
-    initialState,
-    isMounted,
-    openSiblingPanel,
-    panelId,
-    saveConfig,
-    seekPlayback,
-    setDefaultPanelTitle,
-    setGlobalVariables,
-    setHoverValue,
-    setSharedPanelState,
-    setSubscriptions,
-    updatePanelSettingsTree,
-    setMessagePathDropConfig,
-  ]);
+  }, [initialState, seekPlayback, dataSourceProfile, setSharedPanelState, capabilities, isMounted, openSiblingPanel, saveConfig, getMessagePipelineContext, setGlobalVariables, clearHoverValue, setHoverValue, setSubscriptions, panelId, setAttachmentSubscriptions, setMetadataSubscriptions, updatePanelSettingsTree, setDefaultPanelTitle, setMessagePathDropConfig]);
 
   const panelContainerRef = useRef<HTMLDivElement>(ReactNull);
 
@@ -594,6 +628,8 @@ function PanelExtensionAdapter(
       isPanelInitializedRef.current = false;
       panelElement.remove();
       getMessagePipelineContext().setSubscriptions(panelId, []);
+      getMessagePipelineContext().setAttachmentSubscriptions(panelId, []);
+      getMessagePipelineContext().setMetadataSubscriptions(panelId, []);
       getMessagePipelineContext().setPublishers(panelId, []);
     };
   }, [initPanel, panelId, partialExtensionContext, getMessagePipelineContext, configTooNew]);

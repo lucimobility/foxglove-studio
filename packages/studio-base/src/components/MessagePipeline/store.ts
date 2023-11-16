@@ -8,9 +8,14 @@ import shallowequal from "shallowequal";
 import { createStore, StoreApi } from "zustand";
 
 import { Condvar } from "@foxglove/den/async";
-import { Immutable, MessageEvent } from "@foxglove/studio";
+import Log from "@foxglove/log";
+import { Attachment, Immutable, MessageEvent, Metadata } from "@foxglove/studio";
 import {
+  makeAttachmentSubscriptionMemoizer,
+  makeMetadataSubscriptionMemoizer,
   makeSubscriptionMemoizer,
+  mergeAttachmentSubscriptions,
+  mergeMetadataSubscriptions,
   mergeSubscriptions,
 } from "@foxglove/studio-base/components/MessagePipeline/subscriptions";
 import {
@@ -19,6 +24,8 @@ import {
   PlayerCapabilities,
   PlayerPresence,
   PlayerState,
+  SubscribeAttachmentPayload,
+  SubscribeMetadataPayload,
   SubscribePayload,
 } from "@foxglove/studio-base/players/types";
 import { assertNever } from "@foxglove/studio-base/util/assertNever";
@@ -26,6 +33,8 @@ import isDesktopApp from "@foxglove/studio-base/util/isDesktopApp";
 
 import { FramePromise } from "./pauseFrameForPromise";
 import { MessagePipelineContext } from "./types";
+
+const log = Log.getLogger(__filename);
 
 export function defaultPlayerState(): PlayerState {
   return {
@@ -51,6 +60,13 @@ export type MessagePipelineInternalState = {
   /** Preserves reference equality of subscriptions to minimize player subscription churn. */
   subscriptionMemoizer: (sub: SubscribePayload) => SubscribePayload;
   subscriptionsById: Map<string, Immutable<SubscribePayload[]>>;
+
+  attachmentSubscriptionMemoizer: (sub: SubscribeAttachmentPayload) => SubscribeAttachmentPayload;
+  attachmentSubscriptionsById: Map<string, Immutable<SubscribeAttachmentPayload[]>>;
+
+  metadataSubscriptionMemoizer: (sub: SubscribeMetadataPayload) => SubscribeMetadataPayload;
+  metadataSubscriptionsById: Map<string, Immutable<SubscribeMetadataPayload[]>>;
+
   publishersById: { [key: string]: AdvertiseOptions[] };
   allPublishers: AdvertiseOptions[];
   /**
@@ -62,9 +78,14 @@ export type MessagePipelineInternalState = {
    * for dispatching messages needs to iterate over the array of IDs.
    */
   subscriberIdsByTopic: Map<string, string[]>;
+  subscriberIdsByAttachment: Map<string, string[]>;
+  subscriberIdsByMetadata: Map<string, string[]>;
+
   /** This holds the last message emitted by the player on each topic. Attempt to use this before falling back to player backfill.
    */
   lastMessageEventByTopic: Map<string, MessageEvent>;
+  lastAttachmentByTopic: Map<string, Attachment>;
+  lastMetadataByTopic: Map<string, Metadata>;
   /** Function to call when react render has completed with the latest state */
   renderDone?: () => void;
 
@@ -77,6 +98,16 @@ type UpdateSubscriberAction = {
   id: string;
   payloads: Immutable<SubscribePayload[]>;
 };
+type UpdateAttachmentSubscriberAction = {
+  type: "update-attachment-subscriber";
+  id: string;
+  payloads: Immutable<SubscribeAttachmentPayload[]>;
+};
+type UpdateMetadataSubscriberAction = {
+  type: "update-metadata-subscriber";
+  id: string;
+  payloads: Immutable<SubscribeMetadataPayload[]>;
+};
 type UpdatePlayerStateAction = {
   type: "update-player-state";
   playerState: PlayerState;
@@ -86,6 +117,8 @@ type UpdatePlayerStateAction = {
 export type MessagePipelineStateAction =
   | UpdateSubscriberAction
   | UpdatePlayerStateAction
+  | UpdateAttachmentSubscriberAction
+  | UpdateMetadataSubscriberAction
   | { type: "set-publishers"; id: string; payloads: AdvertiseOptions[] };
 
 export function createMessagePipelineStore({
@@ -101,9 +134,19 @@ export function createMessagePipelineStore({
     allPublishers: [],
     subscriptionMemoizer: makeSubscriptionMemoizer(),
     subscriptionsById: new Map(),
+    attachmentSubscriptionMemoizer: makeAttachmentSubscriptionMemoizer(),
+    attachmentSubscriptionsById: new Map(),
+    metadataSubscriptionMemoizer: makeMetadataSubscriptionMemoizer(),
+    metadataSubscriptionsById: new Map(),
     subscriberIdsByTopic: new Map(),
+    subscriberIdsByAttachment: new Map(),
+    subscriberIdsByMetadata: new Map(),
     newTopicsBySubscriberId: new Map(),
+    newAttachmentsBySubscriberId: new Map(),
+    newMetadataBySubscriberId: new Map(),
     lastMessageEventByTopic: new Map(),
+    lastAttachmentByTopic: new Map(),
+    lastMetadataByTopic: new Map(),
     lastCapabilities: [],
 
     dispatch(action) {
@@ -120,13 +163,21 @@ export function createMessagePipelineStore({
         subscriberIdsByTopic: new Map(),
         newTopicsBySubscriberId: new Map(),
         lastMessageEventByTopic: new Map(),
+        lastAttachmentByTopic: new Map(),
+        lastMetadataByTopic: new Map(),
         lastCapabilities: [],
         public: {
           ...prev.public,
           playerState: defaultPlayerState(),
           messageEventsBySubscriberId: new Map(),
+          attachmentsBySubscriberId: new Map(),
+          metadataBySubscriberId: new Map(),
           subscriptions: [],
+          attachmentSubscriptions: [],
+          metadataSubscriptions: [],
           sortedTopics: [],
+          attachmentNames: [],
+          metadataNames: [],
           datatypes: new Map(),
           startPlayback: undefined,
           playUntil: undefined,
@@ -140,11 +191,26 @@ export function createMessagePipelineStore({
     public: {
       playerState: defaultPlayerState(),
       messageEventsBySubscriberId: new Map(),
+      attachmentsBySubscriberId: new Map(),
+      metadataBySubscriberId: new Map(),
       subscriptions: [],
+      attachmentSubscriptions: [],
+      metadataSubscriptions: [],
       sortedTopics: [],
+      attachmentNames: [],
+      metadataNames: [],
       datatypes: new Map(),
       setSubscriptions(id, payloads) {
+        log.info("update-subscriber", payloads);
         get().dispatch({ type: "update-subscriber", id, payloads });
+      },
+      setAttachmentSubscriptions(id, payloads) {
+        log.info("update-attachment-subscriber", payloads);
+        get().dispatch({ type: "update-attachment-subscriber", id, payloads });
+      },
+      setMetadataSubscriptions(id, payloads) {
+        log.info("update-metadata-subscriber", payloads);
+        get().dispatch({ type: "update-metadata-subscriber", id, payloads });
       },
       setPublishers(id, payloads) {
         get().dispatch({ type: "set-publishers", id, payloads });
@@ -314,6 +380,142 @@ function updateSubscriberAction(
     public: newPublicState,
   };
 }
+// Update state with a subscriber. Any new topics for the subscriber are tracked in newTopicsBySubscriberId
+// to receive the last message on their newly subscribed topics.
+function updateAttachmentSubscriberAction(
+  prevState: MessagePipelineInternalState,
+  action: UpdateAttachmentSubscriberAction,
+): MessagePipelineInternalState {
+  const previousSubscriptionsById = prevState.attachmentSubscriptionsById;
+  const newAttachmentsBySubscriberId = new Map(prevState.newAttachmentsBySubscriberId);
+
+  log.info(action);
+
+  // Record any _new_ topics for this subscriber into newTopicsBySubscriberId
+  const newAttachments = newAttachmentsBySubscriberId.get(action.id);
+  if (!newAttachments) {
+    const actionAttachments = action.payloads.map((sub) => sub.name);
+    newAttachmentsBySubscriberId.set(action.id, new Set(actionAttachments));
+  } else {
+    const previousSubscription = previousSubscriptionsById.get(action.id);
+    const prevAttachments = new Set(previousSubscription?.map((sub) => sub.name) ?? []);
+    for (const { name: newName } of action.payloads) {
+      if (!prevAttachments.has(newName)) {
+        newAttachments.add(newName);
+      }
+    }
+  }
+
+  const newSubscriptionsById = new Map(previousSubscriptionsById);
+
+  if (action.payloads.length === 0) {
+    // When a subscription id has no topics we removed it from our map
+    newSubscriptionsById.delete(action.id);
+  } else {
+    newSubscriptionsById.set(action.id, action.payloads);
+  }
+
+  const subscriberIdsByAttachment = new Map<string, string[]>();
+
+  // make a map of topics to subscriber ids
+  for (const [id, subs] of newSubscriptionsById) {
+    for (const subscription of subs) {
+      const name = subscription.name;
+
+      const ids = subscriberIdsByAttachment.get(name) ?? [];
+      // If the id is already present in the array for the topic then we should not add it again.
+      // If we add it again it will be given frame messages again when bucketing incoming messages
+      // by subscriber id.
+      if (!ids.includes(id)) {
+        ids.push(id);
+      }
+      subscriberIdsByAttachment.set(name, ids);
+    }
+  }
+
+  const subscriptions = mergeAttachmentSubscriptions(
+    Array.from(newSubscriptionsById.values()).flat(),
+  );
+
+  return {
+    ...prevState,
+    attachmentSubscriptionsById: newSubscriptionsById,
+    subscriberIdsByAttachment,
+    newAttachmentsBySubscriberId,
+    public: {
+      ...prevState.public,
+      attachmentSubscriptions: subscriptions,
+    },
+  };
+}
+// Update state with a subscriber. Any new topics for the subscriber are tracked in newMetadataBySubscriberId
+// to receive the last message on their newly subscribed topics.
+function updateMetadataSubscriberAction(
+  prevState: MessagePipelineInternalState,
+  action: UpdateMetadataSubscriberAction,
+): MessagePipelineInternalState {
+  const previousSubscriptionsById = prevState.metadataSubscriptionsById;
+  const newMetadataBySubscriberId = new Map(prevState.newMetadataBySubscriberId);
+
+  log.info(action);
+
+  // Record any _new_ topics for this subscriber into newMetadataBySubscriberId
+  const newMetadata = newMetadataBySubscriberId.get(action.id);
+  if (!newMetadata) {
+    const actionMetadata = action.payloads.map((sub) => sub.name);
+    newMetadataBySubscriberId.set(action.id, new Set(actionMetadata));
+  } else {
+    const previousSubscription = previousSubscriptionsById.get(action.id);
+    const prevTopics = new Set(previousSubscription?.map((sub) => sub.name) ?? []);
+    for (const { name: newName } of action.payloads) {
+      if (!prevTopics.has(newName)) {
+        newMetadata.add(newName);
+      }
+    }
+  }
+
+  const newSubscriptionsById = new Map(previousSubscriptionsById);
+
+  if (action.payloads.length === 0) {
+    // When a subscription id has no topics we removed it from our map
+    newSubscriptionsById.delete(action.id);
+  } else {
+    newSubscriptionsById.set(action.id, action.payloads);
+  }
+
+  const subscriberIdsByMetadata = new Map<string, string[]>();
+
+  // make a map of topics to subscriber ids
+  for (const [id, subs] of newSubscriptionsById) {
+    for (const subscription of subs) {
+      const name = subscription.name;
+
+      const ids = subscriberIdsByMetadata.get(name) ?? [];
+      // If the id is already present in the array for the topic then we should not add it again.
+      // If we add it again it will be given frame messages again when bucketing incoming messages
+      // by subscriber id.
+      if (!ids.includes(id)) {
+        ids.push(id);
+      }
+      subscriberIdsByMetadata.set(name, ids);
+    }
+  }
+
+  const subscriptions = mergeMetadataSubscriptions(
+    Array.from(newSubscriptionsById.values()).flat(),
+  );
+
+  return {
+    ...prevState,
+    metadataSubscriptionsById: newSubscriptionsById,
+    subscriberIdsByMetadata,
+    newMetadataBySubscriberId,
+    public: {
+      ...prevState.public,
+      metadataSubscriptions: subscriptions,
+    },
+  };
+}
 // Update with a player state.
 // Put messages from the player state into messagesBySubscriberId. Any new topic subscribers, receive
 // the last message on a topic.
@@ -322,16 +524,26 @@ function updatePlayerStateAction(
   action: UpdatePlayerStateAction,
 ): MessagePipelineInternalState {
   const messages = action.playerState.activeData?.messages;
+  const attachments = action.playerState.activeData?.attachments;
+  const metadata = action.playerState.activeData?.metadata;
 
   const seenTopics = new Set<string>();
+  const seenAttachmentNames = new Set<string>();
+  const seenMetadataNames = new Set<string>();
 
   // We need a new set of message arrays for each subscriber since downstream users rely
   // on object instance reference checks to determine if there are new messages
   const messagesBySubscriberId = new Map<string, MessageEvent[]>();
+  const attachmentsBySubscriberId = new Map<string, Attachment[]>();
+  const metadataBySubscriberId = new Map<string, Metadata[]>();
 
   const subscriberIdsByTopic = prevState.subscriberIdsByTopic;
+  const subscriberIdsByAttachment = prevState.subscriberIdsByAttachment;
+  const subscriberIdsByMetadata = prevState.subscriberIdsByMetadata;
 
   const lastMessageEventByTopic = prevState.lastMessageEventByTopic;
+  const lastAttachmentByTopic = prevState.lastAttachmentByTopic;
+  const lastMetadataByTopic = prevState.lastMetadataByTopic;
 
   // Put messages into per-subscriber queues
   if (messages && messages !== prevState.public.playerState.activeData?.messages) {
@@ -357,10 +569,60 @@ function updatePlayerStateAction(
     }
   }
 
+  // Put attachments into per-subscriber queues
+  if (attachments && attachments !== prevState.public.playerState.activeData?.attachments) {
+    for (const attachment of attachments) {
+      // Save the last message on every topic to send the last message
+      // to newly subscribed panels.
+      lastAttachmentByTopic.set(attachment.name, attachment);
+
+      seenAttachmentNames.add(attachment.name);
+      const ids = subscriberIdsByAttachment.get(attachment.name);
+      if (!ids) {
+        continue;
+      }
+
+      for (const id of ids) {
+        const subscriberAttachments = attachmentsBySubscriberId.get(id);
+        if (!subscriberAttachments) {
+          attachmentsBySubscriberId.set(id, [attachment]);
+        } else {
+          subscriberAttachments.push(attachment);
+        }
+      }
+    }
+  }
+
+  // Put metadata into per-subscriber queues
+  if (metadata && metadata !== prevState.public.playerState.activeData?.metadata) {
+    for (const item of metadata) {
+      // Save the last message on every topic to send the last message
+      // to newly subscribed panels.
+      lastMetadataByTopic.set(item.name, item);
+
+      seenMetadataNames.add(item.name);
+      const ids = subscriberIdsByMetadata.get(item.name);
+      if (!ids) {
+        continue;
+      }
+
+      for (const id of ids) {
+        const subscriberMetadata = metadataBySubscriberId.get(id);
+        if (!subscriberMetadata) {
+          metadataBySubscriberId.set(id, [item]);
+        } else {
+          subscriberMetadata.push(item);
+        }
+      }
+    }
+  }
+
   const newPublicState = {
     ...prevState.public,
     playerState: action.playerState,
     messageEventsBySubscriberId: messagesBySubscriberId,
+    attachmentsBySubscriberId,
+    metadataBySubscriberId,
   };
   const topics = action.playerState.activeData?.topics;
   if (topics !== prevState.public.playerState.activeData?.topics) {
@@ -368,6 +630,21 @@ function updatePlayerStateAction(
       ? [...topics].sort((a, b) => a.name.localeCompare(b.name))
       : [];
   }
+
+  const attachmentNames = action.playerState.activeData?.attachmentNames;
+  if (attachmentNames !== prevState.public.playerState.activeData?.attachmentNames) {
+    newPublicState.attachmentNames = attachmentNames
+      ? [...attachmentNames].sort((a, b) => a.localeCompare(b))
+      : [];
+  }
+
+  const metadataNames = action.playerState.activeData?.metadataNames;
+  if (metadataNames !== prevState.public.playerState.activeData?.metadataNames) {
+    newPublicState.metadataNames = metadataNames
+      ? [...metadataNames].sort((a, b) => a.localeCompare(b))
+      : [];
+  }
+
   if (
     action.playerState.activeData?.datatypes !== prevState.public.playerState.activeData?.datatypes
   ) {
@@ -412,6 +689,10 @@ export function reducer(
       return updatePlayerStateAction(prevState, action);
     case "update-subscriber":
       return updateSubscriberAction(prevState, action);
+    case "update-attachment-subscriber":
+      return updateAttachmentSubscriberAction(prevState, action);
+    case "update-metadata-subscriber":
+      return updateMetadataSubscriberAction(prevState, action);
 
     case "set-publishers": {
       const newPublishersById = { ...prevState.publishersById, [action.id]: action.payloads };

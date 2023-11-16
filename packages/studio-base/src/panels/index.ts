@@ -23,6 +23,8 @@ import teleopThumbnail from "./Teleop/thumbnail.png";
 import threeDeeRenderThumbnail from "./ThreeDeeRender/thumbnail.png";
 import topicGraphThumbnail from "./TopicGraph/thumbnail.png";
 import variableSliderThumbnail from "./VariableSlider/thumbnail.png";
+import viewAttachmentsThumbnail from "./ViewAttachments/thumbnail.png";
+import viewMetadataThumbnail from "./ViewMetadata/thumbnail.png";
 import diagnosticStatusThumbnail from "./diagnostics/thumbnails/diagnostic-status.png";
 import diagnosticSummaryThumbnail from "./diagnostics/thumbnails/diagnostic-summary.png";
 
@@ -105,6 +107,20 @@ export const getBuiltin: (t: TFunction<"panels">) => PanelInfo[] = (t) => [
     description: t("publishDescription"),
     thumbnail: publishThumbnail,
     module: async () => await import("./Publish"),
+  },
+  {
+    title: t("viewAttachments"),
+    type: "ViewAttachments",
+    description: t("viewAttachmentsDescription"),
+    thumbnail: viewAttachmentsThumbnail,
+    module: async () => await import("./ViewAttachments"),
+  },
+  {
+    title: t("viewMetadata"),
+    type: "ViewMetadata",
+    description: t("viewMetadataDescription"),
+    thumbnail: viewMetadataThumbnail,
+    module: async () => await import("./ViewMetadata"),
   },
   {
     title: t("callService"),
