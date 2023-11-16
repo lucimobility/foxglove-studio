@@ -271,8 +271,6 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
                 metricsCollector,
               });
 
-              log.info("new player: ", newPlayer);
-
               setBasePlayer(newPlayer);
               addRecent({
                 type: "file",

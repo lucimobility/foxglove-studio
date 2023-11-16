@@ -30,6 +30,7 @@ import { makeStyles } from "tss-react/mui";
 
 import { Time, compare } from "@foxglove/rostime";
 import { CreateEventDialog } from "@foxglove/studio-base/components/CreateEventDialog";
+import { CreateTagDialog } from "@foxglove/studio-base/components/CreateTagDialog";
 import { DataSourceInfoView } from "@foxglove/studio-base/components/DataSourceInfoView";
 import EventIcon from "@foxglove/studio-base/components/EventIcon";
 import EventOutlinedIcon from "@foxglove/studio-base/components/EventOutlinedIcon";
@@ -50,7 +51,7 @@ import {
   useWorkspaceStore,
 } from "@foxglove/studio-base/context/Workspace/WorkspaceContext";
 import { useWorkspaceActions } from "@foxglove/studio-base/context/Workspace/useWorkspaceActions";
-import { Player, PlayerPresence } from "@foxglove/studio-base/players/types";
+import { Player, PlayerCapabilities, PlayerPresence } from "@foxglove/studio-base/players/types";
 
 import PlaybackTimeDisplay from "./PlaybackTimeDisplay";
 import { RepeatAdapter } from "./RepeatAdapter";
@@ -82,6 +83,7 @@ const useStyles = makeStyles()((theme) => ({
 
 const selectPresence = (ctx: MessagePipelineContext) => ctx.playerState.presence;
 const selectEventsSupported = (store: EventsStore) => store.eventsSupported;
+const selectTagsSupported = (ctx: MessagePipelineContext) => ctx.playerState.capabilities.includes(PlayerCapabilities.append);
 const selectPlaybackRepeat = (store: WorkspaceContextStore) => store.playbackControls.repeat;
 
 export default function PlaybackControls(props: {
@@ -98,8 +100,10 @@ export default function PlaybackControls(props: {
   const { classes, cx } = useStyles();
   const repeat = useWorkspaceStore(selectPlaybackRepeat);
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false);
+  const [createTagDialogOpen, setCreateTagDialogOpen] = useState(false);
   const { currentUserType } = useCurrentUser();
   const eventsSupported = useEvents(selectEventsSupported);
+  const tagsSupported = useMessagePipeline(selectTagsSupported);
 
   const {
     playbackControlActions: { setRepeat },
@@ -178,6 +182,11 @@ export default function PlaybackControls(props: {
     setCreateEventDialogOpen((open) => !open);
   }, [pause]);
 
+  const toggleCreateTagDialog = useCallback(() => {
+    pause();
+    setCreateTagDialogOpen((open) => !open);
+  }, [pause]);
+
   const disableControls = presence === PlayerPresence.ERROR;
 
   return (
@@ -197,13 +206,15 @@ export default function PlaybackControls(props: {
                 onClick={toggleCreateEventDialog}
               />
             )}
-            <HoverableIconButton
-              size="small"
-              title="Create Tag"
-              icon={<TagOutlinedIcon />}
-              activeIcon={<TagIcon />}
-              onClick={toggleCreateEventDialog}
-            />
+            {tagsSupported && (
+              <HoverableIconButton
+                size="small"
+                title="Create Tag"
+                icon={<TagOutlinedIcon />}
+                activeIcon={<TagIcon />}
+                onClick={toggleCreateTagDialog}
+              />
+            )}
             <Tooltip
               // A desired workflow is the ability to copy data source info text (start, end, duration)
               // from the tooltip. However, there's a UX quirk where the tooltip will close if the user
@@ -272,6 +283,9 @@ export default function PlaybackControls(props: {
         </Stack>
         {createEventDialogOpen && eventsSupported && (
           <CreateEventDialog onClose={toggleCreateEventDialog} />
+        )}
+        {createTagDialogOpen && tagsSupported && (
+          <CreateTagDialog onClose={toggleCreateTagDialog} />
         )}
       </div>
     </>

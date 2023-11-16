@@ -18,7 +18,7 @@ import ReactHoverObserver from "react-hover-observer";
 import Tree from "react-json-tree";
 import { makeStyles } from "tss-react/mui";
 
-import { Attachment, Immutable, SettingsTreeAction } from "@foxglove/studio";
+import { Immutable, SettingsTreeAction } from "@foxglove/studio";
 import { useDataSourceInfo } from "@foxglove/studio-base/PanelAPI";
 import EmptyState from "@foxglove/studio-base/components/EmptyState";
 import useGetItemStringWithTimezone from "@foxglove/studio-base/components/JsonTree/useGetItemStringWithTimezone";
@@ -36,7 +36,6 @@ import { useMessageDataItem } from "@foxglove/studio-base/components/MessagePath
 import Panel from "@foxglove/studio-base/components/Panel";
 import { usePanelContext } from "@foxglove/studio-base/components/PanelContext";
 import Stack from "@foxglove/studio-base/components/Stack";
-import useWriteAttachments from "@foxglove/studio-base/hooks/useWriteAttachments";
 import { Toolbar } from "@foxglove/studio-base/panels/RawMessages/Toolbar";
 import getDiff, {
   DiffObject,
@@ -103,16 +102,7 @@ function RawMessages(props: Props) {
   const updatePanelSettingsTree = usePanelSettingsTreeUpdate();
   const { setMessagePathDropConfig } = usePanelContext();
 
-  // const writeAttachments = useWriteAttachments();
-
   useEffect(() => {
-    // const array = new TextEncoder().encode(`{"frameTime": 123,"duration": 5,"tags": {"step" : true},}`);
-    // const attachment: Attachment = {
-    //   name: "test",
-    //   data: array,
-    //   mediaType: "application/json",
-    // };
-    // writeAttachments([attachment]);
     setMessagePathDropConfig({
       getDropStatus(paths) {
         if (paths.length !== 1) {
@@ -134,8 +124,8 @@ function RawMessages(props: Props) {
     () =>
       diffEnabled
         ? (_type: string, data: DiffObject, itemType: React.ReactNode) => (
-          <DiffStats data={data} itemType={itemType} />
-        )
+            <DiffStats data={data} itemType={itemType} />
+          )
         : defaultGetItemString,
     [defaultGetItemString, diffEnabled],
   );
@@ -408,11 +398,11 @@ function RawMessages(props: Props) {
 
     const diff = diffEnabled
       ? getDiff({
-        before: data,
-        after: diffData,
-        idLabel: undefined,
-        showFullMessageForDiff,
-      })
+          before: data,
+          after: diffData,
+          idLabel: undefined,
+          showFullMessageForDiff,
+        })
       : {};
 
     return (
@@ -518,9 +508,9 @@ function RawMessages(props: Props) {
                 ];
                 if (
                   (addedValue != undefined ? 1 : 0) +
-                  (changedValue != undefined ? 1 : 0) +
-                  (deletedValue != undefined ? 1 : 0) ===
-                  1 &&
+                    (changedValue != undefined ? 1 : 0) +
+                    (deletedValue != undefined ? 1 : 0) ===
+                    1 &&
                   idValue == undefined
                 ) {
                   return addedValue ?? changedValue ?? deletedValue;
@@ -549,9 +539,9 @@ function RawMessages(props: Props) {
                     backgroundColor =
                       themePreference === "dark"
                         ? // @ts-expect-error backgroundColor is not a property?
-                        diffLabelsByLabelText[keyPath[0]].invertedBackgroundColor
+                          diffLabelsByLabelText[keyPath[0]].invertedBackgroundColor
                         : // @ts-expect-error backgroundColor is not a property?
-                        diffLabelsByLabelText[keyPath[0]].backgroundColor;
+                          diffLabelsByLabelText[keyPath[0]].backgroundColor;
                     textDecoration =
                       keyPath[0] === diffLabels.DELETED.labelText ? "line-through" : "none";
                   }
@@ -562,9 +552,9 @@ function RawMessages(props: Props) {
                     backgroundColor =
                       themePreference === "dark"
                         ? // @ts-expect-error backgroundColor is not a property?
-                        diffLabelsByLabelText[nestedObjKey].invertedBackgroundColor
+                          diffLabelsByLabelText[nestedObjKey].invertedBackgroundColor
                         : // @ts-expect-error backgroundColor is not a property?
-                        diffLabelsByLabelText[nestedObjKey].backgroundColor;
+                          diffLabelsByLabelText[nestedObjKey].backgroundColor;
                     textDecoration =
                       nestedObjKey === diffLabels.DELETED.labelText ? "line-through" : "none";
                   }
@@ -601,9 +591,9 @@ function RawMessages(props: Props) {
                     backgroundColor =
                       themePreference === "dark"
                         ? // @ts-expect-error backgroundColor is not a property?
-                        diffLabelsByLabelText[nestedObjKey].invertedBackgroundColor
+                          diffLabelsByLabelText[nestedObjKey].invertedBackgroundColor
                         : // @ts-expect-error backgroundColor is not a property?
-                        diffLabelsByLabelText[nestedObjKey].backgroundColor;
+                          diffLabelsByLabelText[nestedObjKey].backgroundColor;
                     textDecoration =
                       nestedObjKey === diffLabels.DELETED.labelText ? "line-through" : "none";
                   }

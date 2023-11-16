@@ -1088,7 +1088,6 @@ export default class UserScriptPlayer implements Player {
   }
 
   public async writeAttachments(attachments: Attachment[]): Promise<void> {
-    log.info("writing attachments in user script player internal player: ", this.#player);
     this.#player.writeAttachments?.(attachments);
   }
 
