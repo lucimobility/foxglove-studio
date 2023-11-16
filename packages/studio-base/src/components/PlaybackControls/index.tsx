@@ -41,6 +41,8 @@ import {
 } from "@foxglove/studio-base/components/MessagePipeline";
 import PlaybackSpeedControls from "@foxglove/studio-base/components/PlaybackSpeedControls";
 import Stack from "@foxglove/studio-base/components/Stack";
+import TagIcon from "@foxglove/studio-base/components/TagIcon";
+import TagOutlinedIcon from "@foxglove/studio-base/components/TagOutlinedIcon";
 import { useCurrentUser } from "@foxglove/studio-base/context/BaseUserContext";
 import { EventsStore, useEvents } from "@foxglove/studio-base/context/EventsContext";
 import {
@@ -195,6 +197,13 @@ export default function PlaybackControls(props: {
                 onClick={toggleCreateEventDialog}
               />
             )}
+            <HoverableIconButton
+              size="small"
+              title="Create Tag"
+              icon={<TagOutlinedIcon />}
+              activeIcon={<TagIcon />}
+              onClick={toggleCreateEventDialog}
+            />
             <Tooltip
               // A desired workflow is the ability to copy data source info text (start, end, duration)
               // from the tooltip. However, there's a UX quirk where the tooltip will close if the user
