@@ -92,6 +92,7 @@ export function useMessageReducer<T>(props: Params<T>): T {
   const requestedAttachments = useShallowMemo(props.attachments);
 
   const subscriptions = useMemo<SubscribePayload[]>(() => {
+    log.info("message reducer req topics: ", requestedTopics);
     return requestedTopics.map((topic) => {
       if (typeof topic === "string") {
         return { topic, preloadType };
@@ -102,6 +103,7 @@ export function useMessageReducer<T>(props: Params<T>): T {
   }, [preloadType, requestedTopics]);
 
   const attachmentSubscriptions = useMemo<SubscribeAttachmentPayload[]>(() => {
+    log.info("message reducer req attachments: ", requestedAttachments);
     return requestedAttachments.map((name) => {
       if (typeof name === "string") {
         return { name };

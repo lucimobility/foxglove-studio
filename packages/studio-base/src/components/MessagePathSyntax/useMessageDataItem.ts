@@ -14,8 +14,13 @@
 import { useCallback, useMemo } from "react";
 
 import { useMessageReducer } from "@foxglove/studio-base/PanelAPI";
+import { subscribePayloadFromAttachmentName } from "@foxglove/studio-base/players/subscribePayloadFromAttachmentName";
 import { subscribePayloadFromMessagePath } from "@foxglove/studio-base/players/subscribePayloadFromMessagePath";
-import { MessageEvent, SubscribePayload } from "@foxglove/studio-base/players/types";
+import {
+  MessageEvent,
+  SubscribeAttachmentPayload,
+  SubscribePayload,
+} from "@foxglove/studio-base/players/types";
 
 import {
   MessageAndData,
@@ -48,6 +53,14 @@ export function useMessageDataItem(path: string, options?: Options): ReducedValu
   const { historySize = 1 } = options ?? {};
   const topics: SubscribePayload[] = useMemo(() => {
     const payload = subscribePayloadFromMessagePath(path, "partial");
+    if (payload) {
+      return [payload];
+    }
+    return [];
+  }, [path]);
+
+  const attachmentNames: SubscribeAttachmentPayload[] = useMemo(() => {
+    const payload = subscribePayloadFromAttachmentName(path, "partial");
     if (payload) {
       return [payload];
     }
@@ -131,6 +144,7 @@ export function useMessageDataItem(path: string, options?: Options): ReducedValu
 
   const reducedValue = useMessageReducer<ReducedValue>({
     topics,
+    attachments: attachmentNames,
     addMessages,
     restore,
   });

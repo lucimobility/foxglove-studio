@@ -6,14 +6,14 @@ import { TFunction } from "i18next";
 import { PanelInfo } from "@foxglove/studio-base/context/PanelCatalogContext";
 import { TAB_PANEL_TYPE } from "@foxglove/studio-base/util/globalConstants";
 
-import attachmentThumnnail from "./Attachments/thumbnail.png";
+import attachmentThumbnail from "./Attachments/thumbnail.png";
 import dataSourceInfoThumbnail from "./DataSourceInfo/thumbnail.png";
 import gaugeThumbnail from "./Gauge/thumbnail.png";
 import imageThumbnail from "./Image/thumbnail.png";
 import indicatorThumbnail from "./Indicator/thumbnail.png";
 import logThumbnail from "./Log/thumbnail.png";
 import mapThumbnail from "./Map/thumbnail.png";
-import metadataThumnnail from "./Metadata/thumbnail.png";
+import metadataThumbnail from "./Metadata/thumbnail.png";
 import parametersThumbnail from "./Parameters/thumbnail.png";
 import plotThumbnail from "./Plot/thumbnail.png";
 import publishThumbnail from "./Publish/thumbnail.png";
@@ -25,6 +25,8 @@ import teleopThumbnail from "./Teleop/thumbnail.png";
 import threeDeeRenderThumbnail from "./ThreeDeeRender/thumbnail.png";
 import topicGraphThumbnail from "./TopicGraph/thumbnail.png";
 import variableSliderThumbnail from "./VariableSlider/thumbnail.png";
+// import viewAttachmentsThumbnail from "./ViewAttachments/thumbnail.png";
+import viewMetadataThumbnail from "./ViewMetadata/thumbnail.png";
 import diagnosticStatusThumbnail from "./diagnostics/thumbnails/diagnostic-status.png";
 import diagnosticSummaryThumbnail from "./diagnostics/thumbnails/diagnostic-summary.png";
 
@@ -112,15 +114,29 @@ export const getBuiltin: (t: TFunction<"panels">) => PanelInfo[] = (t) => [
     title: t("addAttachments"),
     type: "Attachment",
     description: t("attachmentDescription"),
-    thumbnail: attachmentThumnnail,
+    thumbnail: attachmentThumbnail,
     module: async () => await import("./Attachments"),
   },
   {
     title: t("addMetadata"),
     type: "Metadata",
     description: t("metadataDescription"),
-    thumbnail: metadataThumnnail,
+    thumbnail: metadataThumbnail,
     module: async () => await import("./Metadata"),
+  },
+  // {
+  //   title: t("viewAttachments"),
+  //   type: "ViewAttachments",
+  //   description: t("viewAttachmentsDescription"),
+  //   thumbnail: viewAttachmentsThumbnail,
+  //   module: async () => await import("./ViewMetadata"),
+  // },
+  {
+    title: t("viewMetadata"),
+    type: "ViewMetadata",
+    description: t("viewMetadataDescription"),
+    thumbnail: viewMetadataThumbnail,
+    module: async () => await import("./ViewMetadata"),
   },
   {
     title: t("callService"),
