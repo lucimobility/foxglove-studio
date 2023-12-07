@@ -16,6 +16,7 @@ import * as _ from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactHoverObserver from "react-hover-observer";
 import Tree from "react-json-tree";
+import * as toml from "toml";
 import { makeStyles } from "tss-react/mui";
 
 import Log from "@foxglove/log";
@@ -325,6 +326,22 @@ function ViewAttachments(props: Props) {
 
     // const data = dataWithoutWrappingArray(baseItem.queriedData.map(({ value }) => value));
     const data = baseItem.attachment;
+
+    const displayData = {
+      name: baseItem.attachment.name,
+      mediaType: baseItem.attachment.mediaType,
+      createTime: baseItem.attachment.createTime,
+      logTime: baseItem.attachment.logTime,
+      data: baseItem.attachment.data
+    };
+
+    if (baseItem.attachment.mediaType === "application/toml") {
+      displayData.data = toml.parse(new TextDecoder().decode(baseItem.attachment.data));
+    }
+    else if (baseItem.attachment.mediaType === "application/json") {
+      displayData.data = JSON.parse(new TextDecoder().decode(baseItem.attachment.data));
+    }
+
     const hideWrappingArray =
       baseItem.queriedData.length === 1 && typeof baseItem.queriedData[0]?.value === "object";
     const shouldDisplaySingleVal =
@@ -450,7 +467,10 @@ function ViewAttachments(props: Props) {
               },
               label: { textDecoration: "inherit" },
             }}
-            data={data}
+            // data={data}
+            data={displayData}
+          // data={JSON.parse(new TextDecoder().decode(baseItem.attachment.data))}
+          // data={toml.parse(new TextDecoder().decode(baseItem.attachment.data))}
           />
         )}
       </Stack>
