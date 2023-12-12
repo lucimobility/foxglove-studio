@@ -20,11 +20,11 @@ import { createStore } from "zustand";
 
 import { Condvar } from "@foxglove/den/async";
 import { Time, isLessThan } from "@foxglove/rostime";
-import { ParameterValue } from "@foxglove/studio";
 import {
   FramePromise,
   pauseFrameForPromises,
 } from "@foxglove/studio-base/components/MessagePipeline/pauseFrameForPromise";
+import { Attachment, Metadata, ParameterValue } from "@foxglove/studio";
 import { BuiltinPanelExtensionContext } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import {
   AdvertiseOptions,
@@ -49,7 +49,7 @@ import { makeSubscriptionMemoizer } from "./subscriptions";
 
 const NO_DATATYPES = new Map();
 
-function noop() {}
+function noop() { }
 
 export type MockMessagePipelineProps = {
   name?: string;
@@ -81,6 +81,10 @@ export type MockMessagePipelineProps = {
   progress?: Progress;
   urlState?: PlayerURLState;
   /* eslint-enable react/no-unused-prop-types */
+
+  writeAttachments?: (attachments: Attachment[]) => void;
+  writeMetadata?: (metadata: Metadata[]) => void;
+  terminateWriter?() => void;
 };
 type MockMessagePipelineState = MessagePipelineInternalState & {
   mockProps: MockMessagePipelineProps;
@@ -124,27 +128,27 @@ function getPublicState(
         props.noActiveData === true
           ? undefined
           : {
-              messages: props.messages ?? [],
-              topics: props.topics ?? [],
-              topicStats: props.topicStats ?? new Map(),
-              datatypes: props.datatypes ?? NO_DATATYPES,
-              startTime: props.startTime ?? startTime ?? { sec: 100, nsec: 0 },
-              currentTime: currentTime ?? { sec: 100, nsec: 0 },
-              endTime: props.endTime ?? currentTime ?? { sec: 100, nsec: 0 },
-              isPlaying: props.isPlaying ?? false,
-              speed: 0.2,
-              lastSeekTime: 0,
-              totalBytesReceived: 0,
-              ...props.activeData,
-            },
+            messages: props.messages ?? [],
+            topics: props.topics ?? [],
+            topicStats: props.topicStats ?? new Map(),
+            datatypes: props.datatypes ?? NO_DATATYPES,
+            startTime: props.startTime ?? startTime ?? { sec: 100, nsec: 0 },
+            currentTime: currentTime ?? { sec: 100, nsec: 0 },
+            endTime: props.endTime ?? currentTime ?? { sec: 100, nsec: 0 },
+            isPlaying: props.isPlaying ?? false,
+            speed: 0.2,
+            lastSeekTime: 0,
+            totalBytesReceived: 0,
+            ...props.activeData,
+          },
     },
     subscriptions: [],
     sortedTopics:
       props.topics === prevState?.mockProps.topics
         ? prevState?.public.sortedTopics ?? []
         : props.topics
-        ? [...props.topics].sort((a, b) => a.name.localeCompare(b.name))
-        : [],
+          ? [...props.topics].sort((a, b) => a.name.localeCompare(b.name))
+          : [],
     datatypes: props.datatypes ?? NO_DATATYPES,
     setSubscriptions:
       (props.setSubscriptions === prevState?.mockProps.setSubscriptions
@@ -164,7 +168,7 @@ function getPublicState(
       }),
     setParameter: props.setParameter ?? noop,
     publish: props.publish ?? noop,
-    callService: props.callService ?? (async () => {}),
+    callService: props.callService ?? (async () => { }),
     fetchAsset:
       props.fetchAsset ??
       (async () => {
@@ -186,6 +190,25 @@ function getPublicState(
           condvar.notifyAll();
         };
       },
+
+    writeAttachments: (props.writeAttachments === prevState?.mockProps.writeAttachments
+      ? prevState?.public.writeAttachments
+      : undefined) ??
+      ((attachments) => {
+        props.writeAttachments?.(attachments);
+      }),
+    writeMetadata: (props.writeMetadata === prevState?.mockProps.writeMetadata
+      ? prevState?.public.writeMetadata
+      : undefined) ??
+      ((metadata) => {
+        props.writeMetadata?.(metadata);
+      }),
+    terminateWriter: (props.terminateWriter === prevState?.mockProps.terminateWriter
+      ? prevState?.public.terminateWriter
+      : undefined) ??
+      (() => {
+        props.terminateWriter?.();
+      }),
   };
 }
 

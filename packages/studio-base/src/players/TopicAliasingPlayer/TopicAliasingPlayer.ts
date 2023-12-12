@@ -6,7 +6,7 @@ import * as _ from "lodash-es";
 
 import { MutexLocked } from "@foxglove/den/async";
 import { Time } from "@foxglove/rostime";
-import { Immutable, ParameterValue } from "@foxglove/studio";
+import { Attachment, Immutable, Metadata, ParameterValue } from "@foxglove/studio";
 import { Asset } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import { GlobalVariables } from "@foxglove/studio-base/hooks/useGlobalVariables";
 import {
@@ -99,6 +99,18 @@ export class TopicAliasingPlayer implements Player {
 
   public publish(request: PublishPayload): void {
     this.#player.publish(request);
+  }
+
+  public async writeAttachments(attachments: Attachment[]): Promise<void> {
+    this.#player.writeAttachments?.(attachments);
+  }
+
+  public async writeMetadata(metadata: Metadata[]): Promise<void> {
+    this.#player.writeMetadata?.(metadata);
+  }
+
+  public async terminateWriter(): Promise<void> {
+    this.#player.terminateWriter?.();
   }
 
   public async callService(service: string, request: unknown): Promise<unknown> {

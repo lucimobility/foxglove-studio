@@ -11,6 +11,7 @@ import { RegisteredIconNames } from "@foxglove/studio-base/types/Icons";
 export type DataSourceFactoryInitializeArgs = {
   metricsCollector: PlayerMetricsCollectorInterface;
   file?: File;
+  handle?: FileSystemFileHandle;
   files?: File[];
   params?: Record<string, string | undefined>;
 };

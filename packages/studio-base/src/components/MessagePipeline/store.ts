@@ -156,6 +156,15 @@ export function createMessagePipelineStore({
       publish(payload) {
         get().player?.publish(payload);
       },
+      writeAttachments(attachments) {
+        get().player?.writeAttachments?.(attachments);
+      },
+      writeMetadata(metadata) {
+        get().player?.writeMetadata?.(metadata);
+      },
+      terminateWriter() {
+        get().player?.terminateWriter?.();
+      },
       async callService(service, request) {
         const player = get().player;
         if (!player) {

@@ -13,7 +13,7 @@
 
 import { MessageDefinition } from "@foxglove/message-definition";
 import { Time } from "@foxglove/rostime";
-import type { MessageEvent, ParameterValue } from "@foxglove/studio";
+import type { Attachment, MessageEvent, Metadata, ParameterValue } from "@foxglove/studio";
 import { Immutable } from "@foxglove/studio";
 import { Asset } from "@foxglove/studio-base/components/PanelExtensionAdapter";
 import { GlobalVariables } from "@foxglove/studio-base/hooks/useGlobalVariables";
@@ -71,6 +71,10 @@ export interface Player {
   // PlayerCapabilities.setSpeed), set that speed. E.g. 1.0 is real time, 0.2 is 20% of real time.
   setPlaybackSpeed?(speedFraction: number): void;
   setGlobalVariables(globalVariables: GlobalVariables): void;
+
+  writeAttachments?(attachments: Attachment[]): void;
+  writeMetadata?(metadata: Metadata[]): void;
+  terminateWriter?(): void;
 }
 
 export enum PlayerPresence {
@@ -339,6 +343,9 @@ export const PlayerCapabilities = {
 
   // Set values for configuration key/value pairs
   setParameters: "setParameters",
+
+  // Appending to local Mcap files
+  append: "append",
 };
 
 // A metrics collector is an interface passed into a `Player`, which will get called when certain

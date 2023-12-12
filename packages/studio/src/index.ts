@@ -127,6 +127,29 @@ export type MessageEvent<T = unknown> = {
   originalMessageEvent?: MessageEvent;
 };
 
+/**
+ * MCAP Attachment type
+ */
+export type Attachment<T = Uint8Array> = {
+  name: string;
+
+  data: T;
+
+  mediaType: string;
+
+  createTime?: bigint;
+  logTime?: bigint;
+};
+
+/**
+ * MCAP metadata type
+ */
+export type Metadata = {
+  name: string;
+
+  metadata: Map<string, string>;
+};
+
 export interface LayoutActions {
   /** Open a new panel or update an existing panel in the layout.  */
   addPanel(params: {
@@ -394,6 +417,25 @@ export type PanelExtensionContext = {
    * manually. A value of `undefined` will display the panel's name in the title bar.
    */
   setDefaultPanelTitle(defaultTitle: string | undefined): void;
+
+  /**
+   * Write an attachment to an existing MCAP file.
+   *
+   * @param attachments Attachment to write
+   */
+  writeAttachments?(attachments: Attachment[]): void;
+
+  /**
+   * Write metadata to an existing MCAP file.
+   *
+   * @param metadata Metadata to write
+   */
+  writeMetadata?(metadata: Metadata[]): void;
+
+  /**
+   * Terminate writer
+   */
+  terminateWriter?(): void;
 };
 
 export type ExtensionPanelRegistration = {
