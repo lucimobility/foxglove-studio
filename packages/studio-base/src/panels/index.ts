@@ -6,6 +6,7 @@ import { TFunction } from "i18next";
 import { PanelInfo } from "@foxglove/studio-base/context/PanelCatalogContext";
 import { TAB_PANEL_TYPE } from "@foxglove/studio-base/util/globalConstants";
 
+import attachmentThumnnail from "./Attachments/thumbnail.png";
 import dataSourceInfoThumbnail from "./DataSourceInfo/thumbnail.png";
 import gaugeThumbnail from "./Gauge/thumbnail.png";
 import imageThumbnail from "./Image/thumbnail.png";
@@ -105,6 +106,13 @@ export const getBuiltin: (t: TFunction<"panels">) => PanelInfo[] = (t) => [
     description: t("publishDescription"),
     thumbnail: publishThumbnail,
     module: async () => await import("./Publish"),
+  },
+  {
+    title: t("addAttachments"),
+    type: "Attachment",
+    description: t("attachmentDescription"),
+    thumbnail: attachmentThumnnail,
+    module: async () => await import("./Attachments"),
   },
   {
     title: t("callService"),
