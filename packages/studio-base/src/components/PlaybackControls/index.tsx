@@ -30,6 +30,7 @@ import { makeStyles } from "tss-react/mui";
 
 import { Time, compare } from "@foxglove/rostime";
 import { CreateEventDialog } from "@foxglove/studio-base/components/CreateEventDialog";
+import { CreateSaveChangesDialog } from "@foxglove/studio-base/components/CreateSaveChangesDialog";
 import { DataSourceInfoView } from "@foxglove/studio-base/components/DataSourceInfoView";
 import EventIcon from "@foxglove/studio-base/components/EventIcon";
 import EventOutlinedIcon from "@foxglove/studio-base/components/EventOutlinedIcon";
@@ -40,6 +41,8 @@ import {
   useMessagePipeline,
 } from "@foxglove/studio-base/components/MessagePipeline";
 import PlaybackSpeedControls from "@foxglove/studio-base/components/PlaybackSpeedControls";
+import SaveChangesIcon from "@foxglove/studio-base/components/SaveChangesIcon";
+import SaveChangesOutlinedIcon from "@foxglove/studio-base/components/SaveChangesOutlinedIcon";
 import Stack from "@foxglove/studio-base/components/Stack";
 import { useCurrentUser } from "@foxglove/studio-base/context/BaseUserContext";
 import { EventsStore, useEvents } from "@foxglove/studio-base/context/EventsContext";
@@ -48,7 +51,7 @@ import {
   useWorkspaceStore,
 } from "@foxglove/studio-base/context/Workspace/WorkspaceContext";
 import { useWorkspaceActions } from "@foxglove/studio-base/context/Workspace/useWorkspaceActions";
-import { Player, PlayerPresence } from "@foxglove/studio-base/players/types";
+import { Player, PlayerCapabilities, PlayerPresence } from "@foxglove/studio-base/players/types";
 
 import PlaybackTimeDisplay from "./PlaybackTimeDisplay";
 import { RepeatAdapter } from "./RepeatAdapter";
@@ -80,6 +83,7 @@ const useStyles = makeStyles()((theme) => ({
 
 const selectPresence = (ctx: MessagePipelineContext) => ctx.playerState.presence;
 const selectEventsSupported = (store: EventsStore) => store.eventsSupported;
+const selectTagsSupported = (ctx: MessagePipelineContext) => ctx.playerState.capabilities.includes(PlayerCapabilities.append);
 const selectPlaybackRepeat = (store: WorkspaceContextStore) => store.playbackControls.repeat;
 
 export default function PlaybackControls(props: {
@@ -96,8 +100,10 @@ export default function PlaybackControls(props: {
   const { classes, cx } = useStyles();
   const repeat = useWorkspaceStore(selectPlaybackRepeat);
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false);
+  const [createSaveChangesDialogOpen, setCreateSaveChangesDialogOpen] = useState(false);
   const { currentUserType } = useCurrentUser();
   const eventsSupported = useEvents(selectEventsSupported);
+  const tagsSupported = useMessagePipeline(selectTagsSupported);
 
   const {
     playbackControlActions: { setRepeat },
@@ -176,6 +182,11 @@ export default function PlaybackControls(props: {
     setCreateEventDialogOpen((open) => !open);
   }, [pause]);
 
+  const toggleCreateSaveChangesDialog = useCallback(() => {
+    pause();
+    setCreateSaveChangesDialogOpen((open) => !open);
+  }, [pause]);
+
   const disableControls = presence === PlayerPresence.ERROR;
 
   return (
@@ -193,6 +204,15 @@ export default function PlaybackControls(props: {
                 icon={<EventOutlinedIcon />}
                 activeIcon={<EventIcon />}
                 onClick={toggleCreateEventDialog}
+              />
+            )}
+            {tagsSupported && (
+              <HoverableIconButton
+                size="small"
+                title="Save Changes"
+                icon={<SaveChangesOutlinedIcon />}
+                activeIcon={<SaveChangesIcon />}
+                onClick={toggleCreateSaveChangesDialog}
               />
             )}
             <Tooltip
@@ -263,6 +283,9 @@ export default function PlaybackControls(props: {
         </Stack>
         {createEventDialogOpen && eventsSupported && (
           <CreateEventDialog onClose={toggleCreateEventDialog} />
+        )}
+        {createSaveChangesDialogOpen && tagsSupported && (
+          <CreateSaveChangesDialog onClose={toggleCreateSaveChangesDialog} />
         )}
       </div>
     </>
