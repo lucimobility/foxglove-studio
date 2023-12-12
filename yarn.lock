@@ -2538,7 +2538,7 @@ __metadata:
     "@foxglove/wasm-bz2": 0.1.1
     "@foxglove/wasm-lz4": 1.0.2
     "@foxglove/ws-protocol": 0.7.2
-    "@mcap/core": 2.0.2
+    "@mcap/core": "file:/home/alex/luci/mcap/typescript/core/mcap-core-2.1.50.tgz"
     "@mui/icons-material": 5.14.12
     "@mui/material": 5.15.1
     "@popperjs/core": 2.11.8
@@ -3235,6 +3235,17 @@ __metadata:
   version: 2.0.6
   resolution: "@mapbox/tiny-sdf@npm:2.0.6"
   checksum: efff5b5a7599aaa995e3c2fd8f2acd071226096458eebb694ffd7258043c46c52b1d09bb3c7343d2126eb257b3cd7d34e6dc7ccaaad7619e6f3e7dd76229a3cd
+  languageName: node
+  linkType: hard
+
+"@mcap/core@file:/home/alex/luci/mcap/typescript/core/mcap-core-2.1.50.tgz::locator=%40foxglove%2Fstudio-base%40workspace%3Apackages%2Fstudio-base":
+  version: 2.1.50
+  resolution: "@mcap/core@file:/home/alex/luci/mcap/typescript/core/mcap-core-2.1.50.tgz::locator=%40foxglove%2Fstudio-base%40workspace%3Apackages%2Fstudio-base"
+  dependencies:
+    "@foxglove/crc": ^0.0.3
+    heap-js: ^2.2.0
+    tslib: ^2.5.0
+  checksum: 30848a2eb42e64516908c2417d0fcd2a271b962cfd05d8741d1a8f70d919cd5a54ae499d1be8569e590053b58b1c4c7b488f533eb53ac50486d345baf52a0e9f
   languageName: node
   linkType: hard
 
