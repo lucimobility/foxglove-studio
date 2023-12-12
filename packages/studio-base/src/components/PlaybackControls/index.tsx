@@ -31,6 +31,7 @@ import { makeStyles } from "tss-react/mui";
 import { Time, compare } from "@foxglove/rostime";
 import { CreateEventDialog } from "@foxglove/studio-base/components/CreateEventDialog";
 import { CreateSaveChangesDialog } from "@foxglove/studio-base/components/CreateSaveChangesDialog";
+import { CreateTagDialog } from "@foxglove/studio-base/components/CreateTagDialog";
 import { DataSourceInfoView } from "@foxglove/studio-base/components/DataSourceInfoView";
 import EventIcon from "@foxglove/studio-base/components/EventIcon";
 import EventOutlinedIcon from "@foxglove/studio-base/components/EventOutlinedIcon";
@@ -44,6 +45,8 @@ import PlaybackSpeedControls from "@foxglove/studio-base/components/PlaybackSpee
 import SaveChangesIcon from "@foxglove/studio-base/components/SaveChangesIcon";
 import SaveChangesOutlinedIcon from "@foxglove/studio-base/components/SaveChangesOutlinedIcon";
 import Stack from "@foxglove/studio-base/components/Stack";
+import TagIcon from "@foxglove/studio-base/components/TagIcon";
+import TagOutlinedIcon from "@foxglove/studio-base/components/TagOutlinedIcon";
 import { useCurrentUser } from "@foxglove/studio-base/context/BaseUserContext";
 import { EventsStore, useEvents } from "@foxglove/studio-base/context/EventsContext";
 import {
@@ -100,6 +103,7 @@ export default function PlaybackControls(props: {
   const { classes, cx } = useStyles();
   const repeat = useWorkspaceStore(selectPlaybackRepeat);
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false);
+  const [createTagDialogOpen, setCreateTagDialogOpen] = useState(false);
   const [createSaveChangesDialogOpen, setCreateSaveChangesDialogOpen] = useState(false);
   const { currentUserType } = useCurrentUser();
   const eventsSupported = useEvents(selectEventsSupported);
@@ -182,6 +186,11 @@ export default function PlaybackControls(props: {
     setCreateEventDialogOpen((open) => !open);
   }, [pause]);
 
+  const toggleCreateTagDialog = useCallback(() => {
+    pause();
+    setCreateTagDialogOpen((open) => !open);
+  }, [pause]);
+
   const toggleCreateSaveChangesDialog = useCallback(() => {
     pause();
     setCreateSaveChangesDialogOpen((open) => !open);
@@ -204,6 +213,15 @@ export default function PlaybackControls(props: {
                 icon={<EventOutlinedIcon />}
                 activeIcon={<EventIcon />}
                 onClick={toggleCreateEventDialog}
+              />
+            )}
+            {tagsSupported && (
+              <HoverableIconButton
+                size="small"
+                title="Create Tag"
+                icon={<TagOutlinedIcon />}
+                activeIcon={<TagIcon />}
+                onClick={toggleCreateTagDialog}
               />
             )}
             {tagsSupported && (
@@ -283,6 +301,9 @@ export default function PlaybackControls(props: {
         </Stack>
         {createEventDialogOpen && eventsSupported && (
           <CreateEventDialog onClose={toggleCreateEventDialog} />
+        )}
+        {createTagDialogOpen && tagsSupported && (
+          <CreateTagDialog onClose={toggleCreateTagDialog} />
         )}
         {createSaveChangesDialogOpen && tagsSupported && (
           <CreateSaveChangesDialog onClose={toggleCreateSaveChangesDialog} />
