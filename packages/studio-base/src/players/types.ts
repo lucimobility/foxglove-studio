@@ -319,26 +319,19 @@ export type SubscribePayload = {
  */
 export type SubscribeAttachmentPayload = {
   /**
-   * The name of the topic to subscribe to.
+   * The name of the attachment to subscribe to.
    */
   name: string;
-  /**
-   * If defined the source will return only these fields from messages.
-   * Otherwise entire messages will be returned.
-   */
-  fields?: string[];
 };
 
+/**
+ * Represents a subscription to a single metadata, for use in `setMetadataSubscriptions`.
+ */
 export type SubscribeMetadataPayload = {
   /**
-   * The name of the topic to subscribe to.
+   * The name of the metadata to subscribe to.
    */
   name: string;
-  /**
-   * If defined the source will return only these fields from messages.
-   * Otherwise entire messages will be returned.
-   */
-  fields?: string[];
 };
 
 // Represents a single topic publisher, for use in `setPublishers`.

@@ -13,17 +13,9 @@
 
 import { useCallback, useMemo } from "react";
 
-import Log from "@foxglove/log";
 import { Metadata } from "@foxglove/studio";
 import { useMetadataReducer } from "@foxglove/studio-base/PanelAPI";
-import {
-  MetadataAndData,
-  useCachedGetMetadataDataItems,
-} from "@foxglove/studio-base/components/MessagePathSyntax/useCachedGetMetadataDataItems";
-import { subscribePayloadFromMetadataName } from "@foxglove/studio-base/players/subscribePayloadFromMetadataName";
 import { SubscribeMetadataPayload } from "@foxglove/studio-base/players/types";
-
-const log = Log.getLogger(__filename);
 
 type Options = {
   historySize: number;
@@ -31,7 +23,7 @@ type Options = {
 
 type ReducedValue = {
   // Matched message (events) oldest message first
-  matches: MetadataAndData[];
+  matches: Metadata[];
 
   // The latest set of message events recevied to addMessages
   metadataList: readonly Readonly<Metadata>[];
@@ -50,14 +42,8 @@ type ReducedValue = {
 export function useMetadataDataItem(path: string, options?: Options): ReducedValue["matches"] {
   const { historySize = 1 } = options ?? {};
   const metadataNames: SubscribeMetadataPayload[] = useMemo(() => {
-    const payload = subscribePayloadFromMetadataName(path);
-    if (payload) {
-      return [payload];
-    }
-    return [];
+    return [{ name: path }];
   }, [path]);
-
-  const cachedGetMetadataDataItems = useCachedGetMetadataDataItems([path]);
 
   const addMetadatas = useCallback(
     (prevValue: ReducedValue, metadataList: Readonly<Metadata[]>): ReducedValue => {
@@ -65,18 +51,13 @@ export function useMetadataDataItem(path: string, options?: Options): ReducedVal
         return prevValue;
       }
 
-      const newMatches: MetadataAndData[] = [];
+      const newMatches: Metadata[] = [];
 
       // Iterate backwards since our default history size is 1 and we might not need to visit all messages
       // This does mean we need to flip newMatches around since we want to store older items first
       for (let i = metadataList.length - 1; i >= 0 && newMatches.length < historySize; --i) {
         const metadata = metadataList[i]!;
-        log.info(metadata);
-        const queriedData = [metadata]; //cachedGetMetadataDataItems(path, metadata);
-        log.info(queriedData);
-        if (queriedData && queriedData.length > 0) {
-          newMatches.push({ metadata, queriedData });
-        }
+        newMatches.push(metadata);
       }
 
       // We want older items to be first in the array. Since we iterated backwards
@@ -97,7 +78,7 @@ export function useMetadataDataItem(path: string, options?: Options): ReducedVal
         path,
       };
     },
-    [cachedGetMetadataDataItems, historySize, path],
+    [historySize, path],
   );
 
   const restore = useCallback(
@@ -111,12 +92,9 @@ export function useMetadataDataItem(path: string, options?: Options): ReducedVal
       }
 
       // re-filter the previous batch of messages
-      const newMatches: MetadataAndData[] = [];
+      const newMatches: Metadata[] = [];
       for (const metadata of prevValue.metadataList) {
-        const queriedData = cachedGetMetadataDataItems(path, metadata);
-        if (queriedData && queriedData.length > 0) {
-          newMatches.push({ metadata, queriedData });
-        }
+        newMatches.push(metadata);
       }
 
       // Return a new message set if we have matching messages or this is a different path
@@ -131,7 +109,7 @@ export function useMetadataDataItem(path: string, options?: Options): ReducedVal
 
       return prevValue;
     },
-    [cachedGetMetadataDataItems, historySize, path],
+    [historySize, path],
   );
 
   const reducedValue = useMetadataReducer<ReducedValue>({

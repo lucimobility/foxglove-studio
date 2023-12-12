@@ -25,7 +25,6 @@ import useShouldNotChangeOften from "@foxglove/studio-base/hooks/useShouldNotCha
 import {
   PlayerStateActiveData,
   SubscribeAttachmentPayload,
-  SubscriptionPreloadType,
 } from "@foxglove/studio-base/players/types";
 
 const log = Log.getLogger(__filename);
@@ -35,7 +34,6 @@ type AttachmentsReducer<T> = (arg0: T, attachments: readonly Attachment[]) => T;
 
 type Params<T> = {
   attachmentNames: readonly string[] | SubscribeAttachmentPayload[];
-  preloadType?: SubscriptionPreloadType;
 
   // Functions called when the reducers change and for each newly received message.
   // The object is assumed to be immutable, so in order to trigger a re-render, the reducers must
@@ -51,50 +49,44 @@ function selectSetAttachmentSubscriptions(ctx: MessagePipelineContext) {
 
 export function useAttachmentReducer<T>(props: Params<T>): T {
   const [id] = useState(() => uuidv4());
-  const { restore, addAttachment, addAttachments, preloadType = "partial" } = props;
+  const { restore, addAttachment, addAttachments } = props;
 
   // only one of the add message callbacks should be provided
   if ([props.addAttachment, props.addAttachments].filter(Boolean).length !== 1) {
     throw new Error(
-      "useMessageReducer must be provided with exactly one of addMessage or addMessages",
+      "useAttachmentReducer must be provided with exactly one of addAttachment or addAttachments",
     );
   }
 
   useShouldNotChangeOften(props.restore, () => {
     log.warn(
-      "useMessageReducer restore() is changing frequently. " +
+      "useAttachmentReducer restore() is changing frequently. " +
         "restore() will be called each time it changes, so a new function " +
         "shouldn't be created on each render. (If you're using Hooks, try useCallback.)",
     );
   });
   useShouldNotChangeOften(props.addAttachment, () => {
     log.warn(
-      "useMessageReducer addMessage() is changing frequently. " +
-        "addMessage() will be called each time it changes, so a new function " +
+      "useAttachmentReducer addMessage() is changing frequently. " +
+        "addAttachment() will be called each time it changes, so a new function " +
         "shouldn't be created on each render. (If you're using Hooks, try useCallback.)",
     );
   });
   useShouldNotChangeOften(props.addAttachments, () => {
     log.warn(
-      "useMessageReducer addMessages() is changing frequently. " +
-        "addMessages() will be called each time it changes, so a new function " +
+      "useAttachmentReducer addAttachments() is changing frequently. " +
+        "addAttachments() will be called each time it changes, so a new function " +
         "shouldn't be created on each render. (If you're using Hooks, try useCallback.)",
     );
   });
 
   const requestedAttachmentNames = useShallowMemo(props.attachmentNames);
-  log.info("requested attachment names: ", requestedAttachmentNames);
 
   const subscriptions = useMemo<SubscribeAttachmentPayload[]>(() => {
-    log.info("requested attachment names: ", requestedAttachmentNames);
     return requestedAttachmentNames.map((name) => {
-      if (typeof name === "string") {
-        return { name, preloadType };
-      } else {
-        return name;
-      }
+      return name;
     });
-  }, [preloadType, requestedAttachmentNames]);
+  }, [requestedAttachmentNames]);
 
   const setSubscriptions = useMessagePipeline(selectSetAttachmentSubscriptions);
   useEffect(() => {

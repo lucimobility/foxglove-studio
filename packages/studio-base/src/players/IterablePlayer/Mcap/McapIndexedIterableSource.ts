@@ -234,11 +234,6 @@ export class McapIndexedIterableSource implements IIterableSource {
     const attachmentNames = Array.from(names.keys());
 
     const attachments: Attachment[] = [];
-    // for (const topic of topics.keys()) {
-    // NOTE: An iterator is made for each topic to get the latest message on that topic.
-    // An single iterator for all the topics could result in iterating through many
-    // irrelevant messages to get to an older message on a topic.
-
     for await (const name of attachmentNames) {
       for await (const attachment of this.#reader.readAttachments({
         name,
@@ -258,8 +253,6 @@ export class McapIndexedIterableSource implements IIterableSource {
         break;
       }
     }
-
-    log.info("attachments: ", attachments);
     return attachments;
   }
 
@@ -269,10 +262,6 @@ export class McapIndexedIterableSource implements IIterableSource {
     const metadataNames = Array.from(names.keys());
 
     const metadataList: Metadata[] = [];
-    // for (const topic of topics.keys()) {
-    // NOTE: An iterator is made for each topic to get the latest message on that topic.
-    // An single iterator for all the topics could result in iterating through many
-    // irrelevant messages to get to an older message on a topic.
     for await (const name of metadataNames) {
       for await (const metadata of this.#reader.readMetadata({
         name,
@@ -289,8 +278,6 @@ export class McapIndexedIterableSource implements IIterableSource {
         break;
       }
     }
-
-    log.info("metadata: ", metadataList);
     return metadataList;
   }
 

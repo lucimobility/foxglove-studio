@@ -62,6 +62,7 @@ function ToolbarComponent(props: Props): JSX.Element {
           onChange={onTopicPathChange}
           inputStyle={{ height: 20 }}
           metadata={true}
+          placeholder="Some Metadata"
         />
       </Stack>
     </PanelToolbar>

@@ -2,7 +2,12 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { PlayerState, SubscribePayload } from "@foxglove/studio-base/players/types";
+import {
+  PlayerState,
+  SubscribeAttachmentPayload,
+  SubscribeMetadataPayload,
+  SubscribePayload,
+} from "@foxglove/studio-base/players/types";
 
 import { IStateProcessor } from "./IStateProcessor";
 
@@ -17,6 +22,16 @@ export class NoopStateProcessor implements IStateProcessor {
   }
 
   public aliasSubscriptions(subs: SubscribePayload[]): SubscribePayload[] {
+    return subs;
+  }
+
+  public aliasAttachmentSubscriptions(
+    subs: SubscribeAttachmentPayload[],
+  ): SubscribeAttachmentPayload[] {
+    return subs;
+  }
+
+  public aliasMetadataSubscriptions(subs: SubscribeMetadataPayload[]): SubscribeMetadataPayload[] {
     return subs;
   }
 }

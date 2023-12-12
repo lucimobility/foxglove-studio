@@ -182,7 +182,7 @@ export class McapUnindexedIterableSource implements IIterableSource {
           attachments.push({
             name: record.name,
             logTime: fromNanoSec(record.logTime),
-            // createTime: fromNanoSec(record.createTime),
+            createTime: fromNanoSec(record.createTime),
             mediaType: record.mediaType,
             data: record.data,
           });

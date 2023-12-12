@@ -11,65 +11,31 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { Typography } from "@mui/material";
 import * as _ from "lodash-es";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import ReactHoverObserver from "react-hover-observer";
 import Tree from "react-json-tree";
 import { makeStyles } from "tss-react/mui";
 
-import Log from "@foxglove/log";
 import { Immutable, SettingsTreeAction } from "@foxglove/studio";
 import { useDataSourceInfo } from "@foxglove/studio-base/PanelAPI";
 import EmptyState from "@foxglove/studio-base/components/EmptyState";
 import useGetItemStringWithTimezone from "@foxglove/studio-base/components/JsonTree/useGetItemStringWithTimezone";
-import {
-  MessagePathStructureItem,
-} from "@foxglove/studio-base/components/MessagePathSyntax/constants";
-import {
-  messagePathStructures,
-  traverseStructure,
-} from "@foxglove/studio-base/components/MessagePathSyntax/messagePathsForDatatype";
-import { MessagePathDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useCachedGetMessagePathDataItems";
 import { useMetadataDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useMetadataDataItem";
 import Panel from "@foxglove/studio-base/components/Panel";
 import { usePanelContext } from "@foxglove/studio-base/components/PanelContext";
 import Stack from "@foxglove/studio-base/components/Stack";
 import { Toolbar } from "@foxglove/studio-base/panels/ViewMetadata/Toolbar";
-import { diffLabels } from "@foxglove/studio-base/panels/ViewMetadata/getDiff";
 import { usePanelSettingsTreeUpdate } from "@foxglove/studio-base/providers/PanelStateContextProvider";
 import { SaveConfig } from "@foxglove/studio-base/types/panels";
-import { enumValuesByDatatypeAndField } from "@foxglove/studio-base/util/enums";
 import { useJsonTreeTheme } from "@foxglove/studio-base/util/globalConstants";
 
 import { DiffSpan } from "./DiffSpan";
-import MaybeCollapsedValue from "./MaybeCollapsedValue";
-import Metadata from "./Metadata";
-import Value from "./Value";
-import {
-  ValueAction,
-  getStructureItemForPath,
-  getValueActionForValue,
-} from "./getValueActionForValue";
 import { Constants, NodeState, ViewMetadataPanelConfig } from "./types";
-import { DATA_ARRAY_PREVIEW_LIMIT, generateDeepKeyPaths, toggleExpansion } from "./utils";
-
-const log = Log.getLogger(__filename);
+import { generateDeepKeyPaths, toggleExpansion } from "./utils";
 
 type Props = {
   config: Immutable<ViewMetadataPanelConfig>;
   saveConfig: SaveConfig<ViewMetadataPanelConfig>;
-};
-
-const isSingleElemArray = (obj: unknown): obj is unknown[] => {
-  if (!Array.isArray(obj)) {
-    return false;
-  }
-  return obj.filter((a) => a != undefined).length === 1;
-};
-
-const dataWithoutWrappingArray = (data: unknown) => {
-  return isSingleElemArray(data) && typeof data[0] === "object" ? data[0] : data;
 };
 
 const useStyles = makeStyles()((theme) => ({
@@ -77,19 +43,36 @@ const useStyles = makeStyles()((theme) => ({
     fontFamily: theme.typography.body1.fontFamily,
     fontFeatureSettings: `${theme.typography.fontFeatureSettings}, "zero"`,
   },
-  hoverObserver: {
-    display: "inline-flex",
-    alignItems: "center",
-  },
 }));
+
+const diffLabels = {
+  ADDED: {
+    labelText: "STUDIO_DIFF___ADDED",
+    color: "#404047",
+    backgroundColor: "#daffe7",
+    invertedBackgroundColor: "#182924",
+    indicator: "+",
+  },
+  DELETED: {
+    labelText: "STUDIO_DIFF___DELETED",
+    color: "#404047",
+    backgroundColor: "#ffdee3",
+    invertedBackgroundColor: "#3d2327",
+    indicator: "-",
+  },
+  CHANGED: {
+    labelText: "STUDIO_DIFF___CHANGED",
+    color: "#eba800",
+  },
+  ID: { labelText: "STUDIO_DIFF___ID" },
+};
 
 function ViewMetadata(props: Props) {
   const { classes } = useStyles();
   const jsonTreeTheme = useJsonTreeTheme();
   const { config, saveConfig } = props;
-  const { openSiblingPanel } = usePanelContext();
   const { metadataName, fontSize } = config;
-  const { metadataNames, datatypes } = useDataSourceInfo();
+  const { metadataNames } = useDataSourceInfo();
   const updatePanelSettingsTree = usePanelSettingsTreeUpdate();
   const { setMessagePathDropConfig } = usePanelContext();
 
@@ -117,27 +100,17 @@ function ViewMetadata(props: Props) {
     [metadataName, metadataNames],
   );
 
-  const structures = useMemo(() => messagePathStructures(datatypes), [datatypes]);
-
-  const rootStructureItem: MessagePathStructureItem | undefined = useMemo(() => {
-    if (!topic || !metadataName) {
-      return;
-    }
-    return traverseStructure(structures[topic]).structureItem;
-  }, [metadataName, structures, topic]);
-
   const [expansion, setExpansion] = useState(config.expansion);
 
   // Pass an empty path to useMetadataDataItem if our path doesn't resolve to a valid topic to avoid
   // spamming the message pipeline with useless subscription requests.
   const matchedMessages = useMetadataDataItem(topic ? metadataName : "", { historySize: 2 });
-  log.info("matched metadata: ", matchedMessages);
 
   const baseItem = matchedMessages[matchedMessages.length - 1];
 
   const nodes = useMemo(() => {
     if (baseItem) {
-      const data = dataWithoutWrappingArray(baseItem.queriedData.map(({ value }) => value));
+      const data = baseItem;
       return generateDeepKeyPaths(data, 5);
     } else {
       return new Set<string>();
@@ -184,138 +157,6 @@ function ViewMetadata(props: Props) {
     saveConfig({ expansion });
   }, [expansion, saveConfig]);
 
-  const getValueLabels = useCallback(
-    ({
-      constantName,
-      label,
-      itemValue,
-      keyPath,
-    }: {
-      constantName: string | undefined;
-      label: string;
-      itemValue: unknown;
-      keyPath: ReadonlyArray<number | string>;
-    }): { arrLabel: string; itemLabel: string } => {
-      let itemLabel = label;
-      if (typeof itemValue === "bigint") {
-        itemLabel = itemValue.toString();
-      }
-      // output preview for the first x items if the data is in binary format
-      // sample output: Int8Array(331776) [-4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, -4, ...]
-      let arrLabel = "";
-      if (ArrayBuffer.isView(itemValue)) {
-        const array = itemValue as Uint8Array;
-        const itemPart = array.slice(0, DATA_ARRAY_PREVIEW_LIMIT).join(", ");
-        const length = array.length;
-        arrLabel = `(${length}) [${itemPart}${length >= DATA_ARRAY_PREVIEW_LIMIT ? ", ..." : ""}] `;
-        itemLabel = itemValue.constructor.name;
-      }
-      if (constantName != undefined) {
-        itemLabel = `${itemLabel} (${constantName})`;
-      }
-
-      // When we encounter a nsec field (nanosecond) that is a number, we ensure the label displays 9 digits.
-      // This helps when visually scanning time values from `sec` and `nsec` fields.
-      // A nanosecond label of 099999999 makes it easier to realize this is 0.09 seconds compared to
-      // 99999999 which requires some counting to reamize this is also 0.09
-      if (keyPath[0] === "nsec" && typeof itemValue === "number") {
-        itemLabel = _.padStart(itemLabel, 9, "0");
-      }
-
-      return { arrLabel, itemLabel };
-    },
-    [],
-  );
-
-  const renderDiffLabel = useCallback(
-    (label: string, itemValue: unknown) => {
-      let constantName: string | undefined;
-      const { arrLabel, itemLabel } = getValueLabels({
-        constantName,
-        label,
-        itemValue,
-        keyPath: [],
-      });
-      return (
-        <Value
-          arrLabel={arrLabel}
-          basePath=""
-          itemLabel={itemLabel}
-          itemValue={itemValue}
-          valueAction={undefined}
-          onTopicPathChange={onTopicPathChange}
-          openSiblingPanel={openSiblingPanel}
-        />
-      );
-    },
-    [getValueLabels, onTopicPathChange, openSiblingPanel],
-  );
-
-  const enumMapping = useMemo(() => enumValuesByDatatypeAndField(datatypes), [datatypes]);
-
-  const valueRenderer = useCallback(
-    (
-      structureItem: MessagePathStructureItem | undefined,
-      data: unknown[],
-      queriedData: MessagePathDataItem[],
-      label: string,
-      itemValue: unknown,
-      ...keyPath: (number | string)[]
-    ) => (
-      <ReactHoverObserver className={classes.hoverObserver}>
-        {({ isHovering }: { isHovering: boolean }) => {
-          const lastKeyPath = _.last(keyPath) as number;
-          let valueAction: ValueAction | undefined;
-          if (isHovering) {
-            valueAction = getValueActionForValue(
-              data[lastKeyPath],
-              structureItem,
-              keyPath.slice(0, -1).reverse(),
-            );
-          }
-
-          let constantName: string | undefined;
-          if (structureItem) {
-            const childStructureItem = getStructureItemForPath(
-              structureItem,
-              keyPath.slice(0, -1).reverse(),
-            );
-            if (childStructureItem) {
-              // if it's an array index (typeof number) then we want the nearest named array which will be typeof string
-
-              const keyPathIndex = keyPath.findIndex((key) => typeof key === "string");
-              const field = keyPath[keyPathIndex];
-              if (typeof field === "string") {
-                const datatype = childStructureItem.datatype;
-                constantName = enumMapping[datatype]?.[field]?.[String(itemValue)];
-              }
-            }
-          }
-          const basePath = queriedData[lastKeyPath]?.path ?? "";
-          const { arrLabel, itemLabel } = getValueLabels({
-            constantName,
-            label,
-            itemValue,
-            keyPath,
-          });
-
-          return (
-            <Value
-              arrLabel={arrLabel}
-              basePath={basePath}
-              itemLabel={itemLabel}
-              itemValue={itemValue}
-              valueAction={valueAction}
-              onTopicPathChange={onTopicPathChange}
-              openSiblingPanel={openSiblingPanel}
-            />
-          );
-        }}
-      </ReactHoverObserver>
-    ),
-    [classes.hoverObserver, enumMapping, getValueLabels, onTopicPathChange, openSiblingPanel],
-  );
-
   const renderSingleTopicOrDiffOutput = useCallback(() => {
     const shouldExpandNode = (keypath: (string | number)[]) => {
       if (expansion === "all") {
@@ -337,22 +178,14 @@ function ViewMetadata(props: Props) {
     };
 
     if (metadataName.length === 0) {
-      return <EmptyState>No topic selected</EmptyState>;
+      return <EmptyState>No Metadata selected</EmptyState>;
     }
 
     if (!baseItem) {
-      return <EmptyState>Waiting for next message</EmptyState>;
+      return <EmptyState>Waiting for metadata</EmptyState>;
     }
 
-    // const data = dataWithoutWrappingArray(baseItem.queriedData.map(({ value }) => value));
-    const data = baseItem.metadata;
-    log.info(data);
-    const hideWrappingArray =
-      baseItem.queriedData.length === 1 && typeof baseItem.queriedData[0]?.value === "object";
-    const shouldDisplaySingleVal =
-      (data != undefined && typeof data !== "object") ||
-      (isSingleElemArray(data) && data[0] != undefined && typeof data[0] !== "object");
-    const singleVal = isSingleElemArray(data) ? data[0] : data;
+    const data = baseItem;
 
     return (
       <Stack
@@ -362,122 +195,84 @@ function ViewMetadata(props: Props) {
         paddingLeft={0.75}
         data-testid="panel-scroll-container"
       >
-        <Metadata
-          data={data}
-          metadata={baseItem.metadata}
-        />
-        {shouldDisplaySingleVal ? (
-          <Typography
-            variant="h1"
-            fontSize={fontSize}
-            whiteSpace="pre-wrap"
-            style={{ wordWrap: "break-word" }}
-          >
-            <MaybeCollapsedValue itemLabel={String(singleVal)} />
-          </Typography>
-        ) : (
-          <Tree
-            labelRenderer={(raw) => (
-              <>
-                <DiffSpan>{_.first(raw)}</DiffSpan>
-                {/* https://stackoverflow.com/questions/62319014/make-text-selection-treat-adjacent-elements-as-separate-words */}
-                <span style={{ fontSize: 0 }}>&nbsp;</span>
-              </>
-            )}
-            shouldExpandNode={shouldExpandNode}
-            onExpand={(_data, _level, keyPath) => {
-              onLabelClick(keyPath);
-            }}
-            onCollapse={(_data, _level, keyPath) => {
-              onLabelClick(keyPath);
-            }}
-            hideRoot
-            invertTheme={false}
-            getItemString={getItemString}
-            valueRenderer={(valueAsString: string, value, ...keyPath) => {
-              if (hideWrappingArray) {
-                // When the wrapping array is hidden, put it back here.
-                return valueRenderer(
-                  rootStructureItem,
-                  [data],
-                  baseItem.queriedData,
-                  valueAsString,
-                  value,
-                  ...keyPath,
-                  0,
-                );
-              }
-
-              return valueRenderer(
-                rootStructureItem,
-                data as unknown[],
-                baseItem.queriedData,
-                valueAsString,
-                value,
-                ...keyPath,
-              );
-            }}
-            postprocessValue={(rawVal: unknown) => {
-              if (rawVal == undefined) {
-                return rawVal;
-              }
-              const idValue = (rawVal as Record<string, unknown>)[diffLabels.ID.labelText];
-              const addedValue = (rawVal as Record<string, unknown>)[diffLabels.ADDED.labelText];
-              const changedValue = (rawVal as Record<string, unknown>)[
-                diffLabels.CHANGED.labelText
-              ];
-              const deletedValue = (rawVal as Record<string, unknown>)[
-                diffLabels.DELETED.labelText
-              ];
-              if (
-                (addedValue != undefined ? 1 : 0) +
-                (changedValue != undefined ? 1 : 0) +
-                (deletedValue != undefined ? 1 : 0) ===
-                1 &&
-                idValue == undefined
-              ) {
-                return addedValue ?? changedValue ?? deletedValue;
-              }
+        <Tree
+          labelRenderer={(raw) => (
+            <>
+              <DiffSpan>{_.first(raw)}</DiffSpan>
+              {/* https://stackoverflow.com/questions/62319014/make-text-selection-treat-adjacent-elements-as-separate-words */}
+              <span style={{ fontSize: 0 }}>&nbsp;</span>
+            </>
+          )}
+          shouldExpandNode={shouldExpandNode}
+          onExpand={(_data, _level, keyPath) => {
+            onLabelClick(keyPath);
+          }}
+          onCollapse={(_data, _level, keyPath) => {
+            onLabelClick(keyPath);
+          }}
+          hideRoot
+          invertTheme={false}
+          getItemString={getItemString}
+          postprocessValue={(rawVal: unknown) => {
+            if (rawVal == undefined) {
               return rawVal;
-            }}
-            theme={{
-              ...jsonTreeTheme,
-              tree: { margin: 0 },
+            }
+            const idValue = (rawVal as Record<string, unknown>)[diffLabels.ID.labelText];
+            const addedValue = (rawVal as Record<string, unknown>)[diffLabels.ADDED.labelText];
+            const changedValue = (rawVal as Record<string, unknown>)[
+              diffLabels.CHANGED.labelText
+            ];
+            const deletedValue = (rawVal as Record<string, unknown>)[
+              diffLabels.DELETED.labelText
+            ];
+            if (
+              (addedValue != undefined ? 1 : 0) +
+              (changedValue != undefined ? 1 : 0) +
+              (deletedValue != undefined ? 1 : 0) ===
+              1 &&
+              idValue == undefined
+            ) {
+              return addedValue ?? changedValue ?? deletedValue;
+            }
+            return rawVal;
+          }}
+          theme={{
+            ...jsonTreeTheme,
+            tree: { margin: 0 },
 
-              nestedNode: ({ style }) => {
-                const baseStyle = {
-                  ...style,
-                  fontSize,
-                  paddingTop: 2,
-                  paddingBottom: 2,
-                  marginTop: 2,
-                  textDecoration: "inherit",
-                };
-                return { style: baseStyle };
-              },
-              nestedNodeLabel: ({ style }) => ({
-                style: { ...style, textDecoration: "inherit" },
-              }),
-              nestedNodeChildren: ({ style }) => ({
-                style: { ...style, textDecoration: "inherit" },
-              }),
+            nestedNode: ({ style }) => {
+              const baseStyle = {
+                ...style,
+                fontSize,
+                paddingTop: 2,
+                paddingBottom: 2,
+                marginTop: 2,
+                textDecoration: "inherit",
+              };
+              return { style: baseStyle };
+            },
+            nestedNodeLabel: ({ style }) => ({
+              style: { ...style, textDecoration: "inherit" },
+            }),
+            nestedNodeChildren: ({ style }) => ({
+              style: { ...style, textDecoration: "inherit" },
+            }),
 
-              value: ({ style }, _nodeType) => {
-                const baseStyle = {
-                  ...style,
-                  fontSize,
-                  textDecoration: "inherit",
-                };
-                return { style: baseStyle };
-              },
-              label: { textDecoration: "inherit" },
-            }}
-            data={data}
-          />
-        )}
+            value: ({ style }, _nodeType) => {
+              const baseStyle = {
+                ...style,
+                fontSize,
+                textDecoration: "inherit",
+              };
+              return { style: baseStyle };
+            },
+            label: { textDecoration: "inherit" },
+          }}
+          data={data}
+        />
       </Stack>
     );
-  }, [metadataName, baseItem, classes.topic, fontSize, getItemString, jsonTreeTheme, expansion, onLabelClick, valueRenderer, rootStructureItem]);
+  }, [metadataName, baseItem, classes.topic, fontSize, getItemString, jsonTreeTheme, expansion, onLabelClick]);
 
   const actionHandler = useCallback(
     (action: SettingsTreeAction) => {

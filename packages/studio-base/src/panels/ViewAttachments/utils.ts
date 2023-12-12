@@ -11,18 +11,8 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import * as _ from "lodash-es";
-
-import { ros1 } from "@foxglove/rosmsg-msgs-common";
-import { foxgloveMessageSchemas } from "@foxglove/schemas/internal";
-import { diffLabels, DiffObject } from "@foxglove/studio-base/panels/RawMessages/getDiff";
-
 import type { NodeExpansion } from "./types";
 import { NodeState } from "./types";
-
-export const DATA_ARRAY_PREVIEW_LIMIT = 20;
-const ROS1_COMMON_MSG_PACKAGES = new Set(Object.keys(ros1).map((key) => key.split("/")[0]!));
-ROS1_COMMON_MSG_PACKAGES.add("turtlesim");
 
 function isTypedArray(obj: unknown) {
   return Boolean(
@@ -101,51 +91,4 @@ export function generateDeepKeyPaths(obj: unknown, maxArrayLength: number): Set<
   };
   recurseMapKeys([], obj);
   return keys;
-}
-
-export function getChangeCounts(
-  data: DiffObject,
-  startingCounts: {
-    -readonly [K in (typeof diffLabels)["ADDED" | "CHANGED" | "DELETED"]["labelText"]]: number;
-  },
-): {
-  [key: string]: number;
-} {
-  for (const key in data) {
-    if (
-      key === diffLabels.ADDED.labelText ||
-      key === diffLabels.CHANGED.labelText ||
-      key === diffLabels.DELETED.labelText
-    ) {
-      startingCounts[key]++;
-    } else if (typeof data[key] === "object" && data[key] != undefined) {
-      getChangeCounts(data[key] as DiffObject, startingCounts);
-    }
-  }
-  return startingCounts;
-}
-
-const foxgloveDocsLinksByDatatype = new Map<string, string>();
-for (const schema of Object.values(foxgloveMessageSchemas)) {
-  const url = `https://foxglove.dev/docs/studio/messages/${_.kebabCase(schema.name)}`;
-  foxgloveDocsLinksByDatatype.set(`foxglove_msgs/${schema.name}`, url);
-  foxgloveDocsLinksByDatatype.set(`foxglove_msgs/msg/${schema.name}`, url);
-  foxgloveDocsLinksByDatatype.set(`foxglove.${schema.name}`, url);
-}
-
-export function getMessageDocumentationLink(datatype: string): string | undefined {
-  const parts = datatype.split(/[/.]/);
-  const pkg = _.first(parts);
-  const filename = _.last(parts);
-
-  if (pkg != undefined && ROS1_COMMON_MSG_PACKAGES.has(pkg)) {
-    return `https://docs.ros.org/api/${pkg}/html/msg/${filename}.html`;
-  }
-
-  const foxgloveDocsLink = foxgloveDocsLinksByDatatype.get(datatype);
-  if (foxgloveDocsLink != undefined) {
-    return foxgloveDocsLink;
-  }
-
-  return undefined;
 }

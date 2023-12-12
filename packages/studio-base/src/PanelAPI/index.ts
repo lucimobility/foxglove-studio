@@ -22,9 +22,6 @@ export { useAttachmentReducer } from "./useAttachmentReducer";
 export { useMetadataReducer } from "./useMetadataReducer";
 
 export { useMessagesByTopic } from "./useMessagesByTopic";
-export { useAttachmentsByName } from "./useAttachmentsByName";
-export { useMetadataByName } from "./useMetadataByName";
-
 export { useBlocksSubscriptions } from "./useBlocksSubscriptions";
 
 export { default as useConfigById } from "./useConfigById";

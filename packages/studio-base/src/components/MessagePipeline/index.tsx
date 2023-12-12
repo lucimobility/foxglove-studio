@@ -117,11 +117,8 @@ export function MessagePipelineProvider({ children, player }: ProviderProps): Re
 
   // Debounce the subscription updates for players. This batches multiple subscribe calls
   // into one update for the player which avoids fetching data that will be immediately discarded.
-  //
-  // The delay of 0ms is intentional as we only want to give one timeout cycle to batch updates
   const debouncedPlayerSetAttachmentSubscriptions = useMemo(() => {
     return _.debounce((subs: Immutable<SubscribeAttachmentPayload[]>) => {
-      log.info("player: ", player);
       player?.setAttachmentSubscriptions(subs);
     });
   }, [player]);
@@ -130,8 +127,6 @@ export function MessagePipelineProvider({ children, player }: ProviderProps): Re
 
   // Debounce the subscription updates for players. This batches multiple subscribe calls
   // into one update for the player which avoids fetching data that will be immediately discarded.
-  //
-  // The delay of 0ms is intentional as we only want to give one timeout cycle to batch updates
   const debouncedPlayerSetMetadataSubscriptions = useMemo(() => {
     return _.debounce((subs: Immutable<SubscribeMetadataPayload[]>) => {
       player?.setMetadataSubscriptions(subs);

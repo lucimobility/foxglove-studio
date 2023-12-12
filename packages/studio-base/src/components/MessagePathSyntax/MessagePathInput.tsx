@@ -36,7 +36,6 @@ import {
 } from "./messagePathsForDatatype";
 import parseRosPath, { quoteFieldNameIfNeeded, quoteTopicNameIfNeeded } from "./parseRosPath";
 
-
 // To show an input field with an autocomplete so the user can enter message paths, use:
 //
 //  <MessagePathInput path={this.state.path} onChange={path => this.setState({ path })} />
@@ -358,16 +357,12 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
         autocompleteRange: { start: 0, end: Infinity },
       };
     } else if (attachment ?? false) {
-      // If the path is empty, return topic names only to show the full list of topics. Otherwise,
-      // use the full set of topic names and field paths to autocomplete
       return {
         autocompleteItems: attachmentNames,
         autocompleteFilterText: path,
         autocompleteRange: { start: 0, end: Infinity },
       };
     } else if (metadata ?? false) {
-      // If the path is empty, return topic names only to show the full list of topics. Otherwise,
-      // use the full set of topic names and field paths to autocomplete
       return {
         autocompleteItems: metadataNames,
         autocompleteFilterText: path,
@@ -507,7 +502,7 @@ export default React.memo<MessagePathInputBaseProps>(function MessagePathInput(
 
   const hasError =
     usesUnsupportedMathModifier ||
-    (autocompleteType != undefined && !disableAutocomplete && path.length > 0);
+    (autocompleteType != undefined && !disableAutocomplete && path.length > 0 && !(attachment ?? false) && !(metadata ?? false));
 
   return (
     <Autocomplete

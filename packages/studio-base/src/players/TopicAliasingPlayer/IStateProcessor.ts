@@ -33,14 +33,14 @@ export interface IStateProcessor {
   aliasSubscriptions(subs: SubscribePayload[]): SubscribePayload[];
 
   /**
-   * Convert a set of subscriptions for all topics (including aliases) into subscriptions for only
-   * the original topics.
+   * Convert a set of subscriptions for all attachments (including aliases) into subscriptions for only
+   * the original attachments.
    */
   aliasAttachmentSubscriptions(subs: SubscribeAttachmentPayload[]): SubscribeAttachmentPayload[];
 
   /**
-   * Convert a set of subscriptions for all topics (including aliases) into subscriptions for only
-   * the original topics.
+   * Convert a set of subscriptions for all metadata (including aliases) into subscriptions for only
+   * the original metadata.
    */
   aliasMetadataSubscriptions(subs: SubscribeMetadataPayload[]): SubscribeMetadataPayload[];
 }

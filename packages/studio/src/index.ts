@@ -127,6 +127,9 @@ export type MessageEvent<T = unknown> = {
   originalMessageEvent?: MessageEvent;
 };
 
+/**
+ * Mcap attachment type
+ */
 export type Attachment<T = Uint8Array> = {
   name: string;
 
@@ -138,6 +141,9 @@ export type Attachment<T = Uint8Array> = {
   logTime?: bigint;
 };
 
+/**
+ * Mcap metadata type
+ */
 export type Metadata = {
   name: string;
 
@@ -345,31 +351,23 @@ export type PanelExtensionContext = {
    * unsubscribe from any previously subscribed topics no longer in the Subscription list. Passing
    * an empty array will unsubscribe from all topics.
    *
-   * Calling subscribe with an empty array is analagous to unsubscribeAll.
+   * Calling subscribe with an empty array is analogous to unsubscribeAll.
    */
   subscribe(subscriptions: Subscription[]): void;
 
   /**
    * Subscribe to an array of topic names.
    *
-   * Subscribe will update the current subscriptions to the list of topic names. Passing an empty
-   * array will unsubscribe from all topics.
-   *
-   * Calling subscribe with an empty array of topics is analagous to unsubscribeAll.
-   *
-   * @deprecated Use `subscribe` with an array of Subscription objects instead.
+   * Subscribe will update the current subscriptions to the list of attachment names. Passing an empty
+   * array will unsubscribe from all attachments.
    */
   subscribeAttachment(names: string[]): void;
 
   /**
    * Subscribe to an array of topic names.
    *
-   * Subscribe will update the current subscriptions to the list of topic names. Passing an empty
-   * array will unsubscribe from all topics.
-   *
-   * Calling subscribe with an empty array of topics is analagous to unsubscribeAll.
-   *
-   * @deprecated Use `subscribe` with an array of Subscription objects instead.
+   * Subscribe will update the current subscriptions to the list of metadata names. Passing an empty
+   * array will unsubscribe from all metadata.
    */
   subscribeMetadata(names: string[]): void;
 

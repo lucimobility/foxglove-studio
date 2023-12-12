@@ -319,7 +319,6 @@ export class IterablePlayer implements Player {
   }
 
   public setAttachmentSubscriptions(newSubscriptions: SubscribeAttachmentPayload[]): void {
-    log.info("set attachment subscriptions", newSubscriptions);
     this.#attachmentSubscriptions = newSubscriptions;
     // this.#metricsCollector.setSubscriptions(newSubscriptions);
 
@@ -356,7 +355,6 @@ export class IterablePlayer implements Player {
   }
 
   public setMetadataSubscriptions(newSubscriptions: SubscribeMetadataPayload[]): void {
-    log.info("set metadata subscriptions", newSubscriptions);
     this.#metadataSubscriptions = newSubscriptions;
     // this.#metricsCollector.setSubscriptions(newSubscriptions);
 
@@ -393,7 +391,6 @@ export class IterablePlayer implements Player {
   }
 
   public setSubscriptions(newSubscriptions: SubscribePayload[]): void {
-    log.info("set subscriptions", newSubscriptions);
     this.#subscriptions = newSubscriptions;
     this.#metricsCollector.setSubscriptions(newSubscriptions);
 
@@ -683,13 +680,11 @@ export class IterablePlayer implements Player {
     this.#attachments = await this.#iterableSource.getAttachments({
       names: this.#allAttachmentNames,
     });
-    log.info("all attachment names: ", this.#allAttachmentNames);
 
     log.debug("Initializing metadata iterator from", this.#start);
     this.#metadata = await this.#iterableSource.getMetadata({
       names: this.#allMetadataNames,
     });
-    log.info("all metadata names: ", this.#allMetadataNames);
   }
 
   async #stateResetPlaybackIterator() {
@@ -738,13 +733,11 @@ export class IterablePlayer implements Player {
     this.#attachments = await this.#iterableSource.getAttachments({
       names: this.#allAttachmentNames,
     });
-    log.info("all attachment names: ", this.#allAttachmentNames);
 
     log.debug("Initializing metadata iterator from", this.#start);
     this.#metadata = await this.#iterableSource.getMetadata({
       names: this.#allMetadataNames,
     });
-    log.info("all metadata names: ", this.#allMetadataNames);
 
     this.#lastMessageEvent = undefined;
     this.#messages = [];

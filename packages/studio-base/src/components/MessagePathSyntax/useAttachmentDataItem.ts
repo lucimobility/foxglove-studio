@@ -11,19 +11,11 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
-import Log from "@foxglove/log";
 import { Attachment } from "@foxglove/studio";
 import { useAttachmentReducer } from "@foxglove/studio-base/PanelAPI";
-import {
-  AttachmentAndData,
-  useCachedGetAttachmentDataItems,
-} from "@foxglove/studio-base/components/MessagePathSyntax/useCachedGetAttachmentDataItems";
-import { subscribePayloadFromAttachmentName } from "@foxglove/studio-base/players/subscribePayloadFromAttachmentName";
 import { SubscribeAttachmentPayload } from "@foxglove/studio-base/players/types";
-
-const log = Log.getLogger(__filename);
 
 type Options = {
   historySize: number;
@@ -31,9 +23,9 @@ type Options = {
 
 type ReducedValue = {
   // Matched message (events) oldest message first
-  matches: AttachmentAndData[];
+  matches: Attachment[];
 
-  // The latest set of message events recevied to addMessages
+  // The latest set of message events received to addMessages
   attachments: readonly Readonly<Attachment>[];
 
   // The path used to match these messages.
@@ -48,19 +40,8 @@ type ReducedValue = {
  * The `historySize` option configures how many matching messages to keep. The default is 1.
  */
 export function useAttachmentDataItem(path: string, options?: Options): ReducedValue["matches"] {
-  log.info(path);
   const { historySize = 1 } = options ?? {};
-  const attachmentNames: SubscribeAttachmentPayload[] = useMemo(() => {
-    const payload = subscribePayloadFromAttachmentName(path);
-    if (payload) {
-      return [payload];
-    }
-    return [];
-  }, [path]);
-
-  log.info(attachmentNames);
-
-  const cachedGetAttachmentDataItems = useCachedGetAttachmentDataItems([path]);
+  const attachmentNames: SubscribeAttachmentPayload[] = [{ name: path }];
 
   const addAttachments = useCallback(
     (prevValue: ReducedValue, attachments: Readonly<Attachment[]>): ReducedValue => {
@@ -68,16 +49,13 @@ export function useAttachmentDataItem(path: string, options?: Options): ReducedV
         return prevValue;
       }
 
-      const newMatches: AttachmentAndData[] = [];
+      const newMatches: Attachment[] = [];
 
       // Iterate backwards since our default history size is 1 and we might not need to visit all messages
       // This does mean we need to flip newMatches around since we want to store older items first
       for (let i = attachments.length - 1; i >= 0 && newMatches.length < historySize; --i) {
         const attachment = attachments[i]!;
-        const queriedData = [attachment]; //cachedGetAttachmentDataItems(path, attachment);
-        if (queriedData && queriedData.length > 0) {
-          newMatches.push({ attachment, queriedData });
-        }
+        newMatches.push(attachment);
       }
 
       // We want older items to be first in the array. Since we iterated backwards
@@ -112,12 +90,9 @@ export function useAttachmentDataItem(path: string, options?: Options): ReducedV
       }
 
       // re-filter the previous batch of messages
-      const newMatches: AttachmentAndData[] = [];
+      const newMatches: Attachment[] = [];
       for (const attachment of prevValue.attachments) {
-        const queriedData = cachedGetAttachmentDataItems(path, attachment);
-        if (queriedData && queriedData.length > 0) {
-          newMatches.push({ attachment, queriedData });
-        }
+        newMatches.push(attachment);
       }
 
       // Return a new message set if we have matching messages or this is a different path
@@ -132,7 +107,7 @@ export function useAttachmentDataItem(path: string, options?: Options): ReducedV
 
       return prevValue;
     },
-    [cachedGetAttachmentDataItems, historySize, path],
+    [historySize, path],
   );
 
   const reducedValue = useAttachmentReducer<ReducedValue>({

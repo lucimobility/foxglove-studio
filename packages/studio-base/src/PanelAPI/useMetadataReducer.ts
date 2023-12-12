@@ -54,43 +54,37 @@ export function useMetadataReducer<T>(props: Params<T>): T {
   // only one of the add message callbacks should be provided
   if ([props.addMetadata, props.addMetadatas].filter(Boolean).length !== 1) {
     throw new Error(
-      "useMessageReducer must be provided with exactly one of addMessage or addMessages",
+      "useMetadataReducer must be provided with exactly one of addMetadata or addMetadatas",
     );
   }
 
   useShouldNotChangeOften(props.restore, () => {
     log.warn(
-      "useMessageReducer restore() is changing frequently. " +
+      "useMetadataReducer restore() is changing frequently. " +
         "restore() will be called each time it changes, so a new function " +
         "shouldn't be created on each render. (If you're using Hooks, try useCallback.)",
     );
   });
   useShouldNotChangeOften(props.addMetadata, () => {
     log.warn(
-      "useMessageReducer addMessage() is changing frequently. " +
-        "addMessage() will be called each time it changes, so a new function " +
+      "useMetadataReducer addMetadata() is changing frequently. " +
+        "addMetadata() will be called each time it changes, so a new function " +
         "shouldn't be created on each render. (If you're using Hooks, try useCallback.)",
     );
   });
   useShouldNotChangeOften(props.addMetadatas, () => {
     log.warn(
-      "useMessageReducer addMessages() is changing frequently. " +
-        "addMessages() will be called each time it changes, so a new function " +
+      "useMetadataReducer addMetadatas() is changing frequently. " +
+        "addMetadatas() will be called each time it changes, so a new function " +
         "shouldn't be created on each render. (If you're using Hooks, try useCallback.)",
     );
   });
 
   const requestedMetadataNames = useShallowMemo(props.metadataNames);
-  log.info("requested metadata names: ", requestedMetadataNames);
 
   const subscriptions = useMemo<SubscribeMetadataPayload[]>(() => {
-    log.info("requested metadata names: ", requestedMetadataNames);
     return requestedMetadataNames.map((name) => {
-      if (typeof name === "string") {
-        return { name };
-      } else {
-        return name;
-      }
+      return name;
     });
   }, [requestedMetadataNames]);
 
@@ -120,14 +114,11 @@ export function useMetadataReducer<T>(props: Params<T>): T {
     useCallback(
       // To compute the reduced value from new messages:
       // - Call restore() to initialize state, if lastSeekTime has changed, or if reducers have changed
-      // - Call addMessage() or addMessages() if any new messages of interest have arrived
+      // - Call addMetadata() or addMetadatas() if any new messages of interest have arrived
       // - Otherwise, return the previous reducedValue so that we don't trigger an unnecessary render.
       function selectReducedMessages(ctx: MessagePipelineContext): T {
-        log.info(ctx.metadataBySubscriberId);
         const metadatas = ctx.metadataBySubscriberId.get(id);
         const lastSeekTime = ctx.playerState.activeData?.lastSeekTime;
-
-        log.info(metadatas);
 
         let newReducedValue: T;
         if (!state.current) {
@@ -153,8 +144,6 @@ export function useMetadataReducer<T>(props: Params<T>): T {
             }
           }
         }
-
-        log.info(state.current);
 
         state.current = {
           metadatas,

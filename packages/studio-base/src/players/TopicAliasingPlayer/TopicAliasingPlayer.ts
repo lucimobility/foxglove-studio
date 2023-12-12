@@ -42,8 +42,8 @@ export class TopicAliasingPlayer implements Player {
 
   #inputs: Immutable<StateFactoryInput>;
   #aliasedSubscriptions: undefined | SubscribePayload[];
-  #pendingAttachmentSubscriptions: undefined | SubscribeAttachmentPayload[];
-  #pendingMetadataSubscriptions: undefined | SubscribeMetadataPayload[];
+  #aliasedAttachmentSubscriptions: undefined | SubscribeAttachmentPayload[];
+  #aliasedMetadataSubscriptions: undefined | SubscribeMetadataPayload[];
   #subscriptions: SubscribePayload[] = [];
   #attachmentSubscriptions: SubscribeAttachmentPayload[] = [];
   #metadataSubscriptions: SubscribeMetadataPayload[] = [];
@@ -97,42 +97,16 @@ export class TopicAliasingPlayer implements Player {
 
   public setAttachmentSubscriptions(subscriptions: SubscribeAttachmentPayload[]): void {
     this.#attachmentSubscriptions = subscriptions;
-
-    if (this.#skipAliasing) {
-      this.#player.setAttachmentSubscriptions(subscriptions);
-      return;
-    }
-
-    // If we have aliases but haven't recieved a topic list from an active state from
-    // the wrapped player yet we have to delay setSubscriptions until we have the topic
-    // list to set up the aliases.
-    if (this.#inputs.topics != undefined) {
-      const aliasedSubscriptions = this.#stateProcessor.aliasAttachmentSubscriptions(subscriptions);
-      this.#player.setAttachmentSubscriptions(aliasedSubscriptions);
-      this.#pendingAttachmentSubscriptions = undefined;
-    } else {
-      this.#pendingAttachmentSubscriptions = subscriptions;
-    }
+    this.#aliasedAttachmentSubscriptions =
+      this.#stateProcessor.aliasAttachmentSubscriptions(subscriptions);
+    this.#player.setAttachmentSubscriptions(this.#aliasedAttachmentSubscriptions);
   }
 
   public setMetadataSubscriptions(subscriptions: SubscribeMetadataPayload[]): void {
     this.#metadataSubscriptions = subscriptions;
-
-    if (this.#skipAliasing) {
-      this.#player.setMetadataSubscriptions(subscriptions);
-      return;
-    }
-
-    // If we have aliases but haven't recieved a topic list from an active state from
-    // the wrapped player yet we have to delay setSubscriptions until we have the topic
-    // list to set up the aliases.
-    if (this.#inputs.topics != undefined) {
-      const aliasedSubscriptions = this.#stateProcessor.aliasMetadataSubscriptions(subscriptions);
-      this.#player.setMetadataSubscriptions(aliasedSubscriptions);
-      this.#pendingMetadataSubscriptions = undefined;
-    } else {
-      this.#pendingMetadataSubscriptions = subscriptions;
-    }
+    this.#aliasedMetadataSubscriptions =
+      this.#stateProcessor.aliasMetadataSubscriptions(subscriptions);
+    this.#player.setMetadataSubscriptions(this.#aliasedMetadataSubscriptions);
   }
 
   public setPublishers(publishers: AdvertiseOptions[]): void {
@@ -262,18 +236,6 @@ export class TopicAliasingPlayer implements Player {
         this.#metadataSubscriptions,
       );
       await listener(newState);
-
-      // if (this.#pendingSubscriptions && this.#inputs.topics) {
-      //   this.setSubscriptions(this.#pendingSubscriptions);
-      // }
-
-      if (this.#pendingAttachmentSubscriptions && this.#inputs.topics) {
-        this.setAttachmentSubscriptions(this.#pendingAttachmentSubscriptions);
-      }
-
-      if (this.#pendingMetadataSubscriptions && this.#inputs.topics) {
-        this.setMetadataSubscriptions(this.#pendingMetadataSubscriptions);
-      }
     });
   }
 
