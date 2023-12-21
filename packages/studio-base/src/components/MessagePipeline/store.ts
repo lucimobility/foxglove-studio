@@ -141,8 +141,6 @@ export function createMessagePipelineStore({
     newAttachmentsBySubscriberId: new Map(),
     newMetadataBySubscriberId: new Map(),
     lastMessageEventByTopic: new Map(),
-    lastAttachmentByTopic: new Map(),
-    lastMetadataByTopic: new Map(),
     lastCapabilities: [],
 
     dispatch(action) {
@@ -159,8 +157,6 @@ export function createMessagePipelineStore({
         subscriberIdsByTopic: new Map(),
         newTopicsBySubscriberId: new Map(),
         lastMessageEventByTopic: new Map(),
-        lastAttachmentByTopic: new Map(),
-        lastMetadataByTopic: new Map(),
         lastCapabilities: [],
         public: {
           ...prev.public,
@@ -496,8 +492,6 @@ function updatePlayerStateAction(
   const subscriberIdsByMetadata = prevState.subscriberIdsByMetadata;
 
   const lastMessageEventByTopic = prevState.lastMessageEventByTopic;
-  const lastAttachmentByTopic = prevState.lastAttachmentByTopic;
-  const lastMetadataByTopic = prevState.lastMetadataByTopic;
 
   // Put messages into per-subscriber queues
   if (messages && messages !== prevState.public.playerState.activeData?.messages) {
